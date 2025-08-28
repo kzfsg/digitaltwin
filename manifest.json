@@ -6,5 +6,12 @@
   "action": {
     "default_popup": "src/popup/popup.html",
     "default_icon": "logo.png"
-  }
+  },
+  "permissions": ["activeTab", "scripting", "tabs", "notifications"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
 }
