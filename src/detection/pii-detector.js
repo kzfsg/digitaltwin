@@ -1,5 +1,5 @@
 // Simple PII detection (replace with DistilBERT model later)
-export function detectPII(text, field) {
+function detectPII(text, field) {
     
     console.log("Detecting PII in text...",);
     // exit early (empty input edge case)
@@ -41,12 +41,16 @@ export function detectPII(text, field) {
 }
 
 // Debounce function 
-// To improve perfomance, doesn’t run on every single keystroke, 
+// To improve perfomance, doesn't run on every single keystroke, 
 // which can be expensive, especially when the text is long
-export function debounce(fn, delay = 300) {
+function debounce(fn, delay = 300) {
     let timer;
     return (...args) => {
         clearTimeout(timer);
         timer = setTimeout(() => fn(...args), delay);
     };
 }
+
+// Make functions globally available for content script
+window.detectPII = detectPII;
+window.debounce = debounce;
