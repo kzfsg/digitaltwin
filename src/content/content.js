@@ -129,7 +129,7 @@ function attachChatbotListener(field) {
     // Debounced text detection
     const debouncedDetect = debounce((text) => {
         if (text.trim().length > 0) {
-            detectPII(text, field);
+            detectPII(text);
             showInOverlay(text, field);
         }
     }, 300);
