@@ -1,6 +1,7 @@
 // Simple PII detection (replace with DistilBERT model later)
 export function detectPII(text, field) {
     
+    console.log("Detecting PII in text...",);
     // exit early (empty input edge case)
     if (!text || !field) return;
 

@@ -7,7 +7,7 @@
     "default_popup": "src/popup/popup.html",
     "default_icon": "logo.png"
   },
-  "permissions": ["activeTab", "scripting", "tabs", "notifications"],
+  "permissions": ["activeTab", "scripting", "tabs", "notifications", "storage"],
   "background": {
     "service_worker": "src/background/background.js",
     "type": "module"
@@ -15,9 +15,8 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content/content.js"],
-      "run_at": "document_idle",
-      "type": "module"
+      "js": ["src/detection/pii-detector.js", "src/content/content.js"],
+      "run_at": "document_idle"
     }
   ]
 }
