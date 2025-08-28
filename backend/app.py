@@ -1,8 +1,17 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or ["chrome-extension://<your-extension-id>"]
+    allow_credentials=True,
+    allow_methods=["*"],  # <-- allow OPTIONS, GET, POST, etc.
+    allow_headers=["*"],
+)
 
 tokenizer = AutoTokenizer.from_pretrained("iiiorg/piiranha-v1-detect-personal-information")
 model = AutoModelForTokenClassification.from_pretrained("iiiorg/piiranha-v1-detect-personal-information")

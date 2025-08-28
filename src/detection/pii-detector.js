@@ -16,3 +16,14 @@ async function detectPII(text) {
     console.error("Error calling PII API:", error);
   }
 }
+
+// Debounce function
+// To improve perfomance, doesn’t run on every single keystroke,
+// which can be expensive, especially when the text is long
+function debounce(fn, delay = 300) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
