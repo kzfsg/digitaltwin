@@ -1,0 +1,13 @@
+{
+  "name": "digital-twin-privacy-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension for automatic PII protection using AI-generated personas",
+  "scripts": {
+    "build": "echo 'Build script placeholder'",
+    "test": "echo 'Test script placeholder'",
+    "lint": "echo 'Lint script placeholder'"
+  },
+  "keywords": ["privacy", "chrome-extension", "pii-protection"],
+  "devDependencies": {},
+  "dependencies": {}
+}
