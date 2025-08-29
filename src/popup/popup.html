@@ -50,18 +50,46 @@
         }
         .log-entry {
             margin: 5px 0;
-            padding: 5px;
+            padding: 8px;
             background: white;
-            border-radius: 3px;
-            border-left: 3px solid #ff6b6b;
+            border-radius: 6px;
+            border-left: 4px solid #ff6b6b;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .log-timestamp {
             color: #666;
             font-size: 10px;
         }
-        .log-text {
-            margin-top: 3px;
-            word-break: break-all;
+        .log-field {
+            font-size: 10px;
+            color: #007cba;
+            margin-top: 2px;
+        }
+        .log-entities {
+            margin-top: 5px;
+        }
+        .entity-item {
+            display: inline-block;
+            margin: 2px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+        }
+        .entity-email { background: #4a90e2; }
+        .entity-phone { background: #2ecc71; }
+        .entity-person { background: #9b59b6; }
+        .entity-ssn { background: #e74c3c; }
+        .entity-address { background: #e67e22; }
+        .entity-credit_card { background: #f1c40f; color: #333; }
+        .pii-count {
+            background: rgba(255, 107, 107, 0.1);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            color: #ff6b6b;
+            font-weight: bold;
         }
         .no-detections {
             color: #666;
@@ -116,9 +144,9 @@
         </div>
         
         <div class="status-section">
-            <div class="status-title">Recent Detections</div>
+            <div class="status-title">PII Detections</div>
             <div id="detectionLog" class="detection-log">
-                <div class="no-detections">No text detected yet. Start typing in AI chatbots!</div>
+                <div class="no-detections">No PII detected yet. Start typing personal information!</div>
             </div>
             <button id="clearLog" class="clear-btn">Clear Log</button>
         </div>
