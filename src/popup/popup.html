@@ -2,12 +2,16 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
     <style>
         body {
             width: 350px;
             padding: 15px;
-            font-family: Arial, sans-serif;
-            background: #f8f9fa;
+            font-family: "Figtree", sans-serif;
+            background: black;
+            color: white;
         }
         .container {
             display: flex;
@@ -16,12 +20,13 @@
         }
         .header {
             text-align: center;
-            border-bottom: 2px solid #007cba;
+            border-bottom: 2px solid #5ce1e6;
             padding-bottom: 10px;
         }
         .header h2 {
             margin: 0;
-            color: #007cba;
+            color: white;
+            font-weight: 900;
         }
         .subtitle {
             font-size: 12px;
@@ -29,31 +34,32 @@
             margin: 5px 0 0 0;
         }
         .status-section {
-            background: white;
+            background: black;
             padding: 12px;
             border-radius: 8px;
-            border: 1px solid #ddd;
+            border: 1px solid white;
         }
         .status-title {
             font-weight: bold;
             margin-bottom: 8px;
-            color: #333;
+            color: black;
         }
         .detection-log {
             max-height: 200px;
             overflow-y: auto;
-            background: #f8f9fa;
+            background: white;
             padding: 8px;
             border-radius: 4px;
             font-size: 11px;
             font-family: monospace;
+            border: 1px solid black;
         }
         .log-entry {
             margin: 5px 0;
             padding: 5px;
             background: white;
             border-radius: 3px;
-            border-left: 3px solid #ff6b6b;
+            border-left: 3px solid #e33262;
         }
         .log-timestamp {
             color: #666;
@@ -71,15 +77,15 @@
         }
         button {
             padding: 10px;
-            border: none;
-            background: #007cba;
-            color: white;
+            border: 1px solid black;
+            background: #5ce1e6;
+            color: black;
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
         }
         button:hover {
-            background: #005a87;
+            background: #4dd4da;
         }
         .stats {
             display: flex;
@@ -91,12 +97,14 @@
             border-radius: 6px;
         }
         .clear-btn {
-            background: #dc3545;
+            background: #e33262;
+            color: white;
             font-size: 12px;
             padding: 6px 12px;
+            border: 1px solid black;
         }
         .clear-btn:hover {
-            background: #c82333;
+            background: #d12851;
         }
     </style>
 </head>
