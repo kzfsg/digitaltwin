@@ -132,13 +132,11 @@ function attachChatbotListener(field) {
   // Debounced text detection
   const debouncedDetect = debounce(async (text) => {
     if (text.trim().length > 0) {
-      const result = await detectPII(text); // <-- await return value
-      console.log("🔍 PII detection result:", result);
+      const result = await detectPII(text);
 
-      // You can also pass result into your overlay
       showInOverlay(`${text} \n\nDetected: ${JSON.stringify(result)}`, field);
 
-      return result; // <-- returns PII detection result
+      return result;
     }
   }, 300);
 
