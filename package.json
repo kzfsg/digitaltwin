@@ -3,11 +3,27 @@
   "version": "1.0.0",
   "description": "Chrome extension for automatic PII protection using AI-generated personas",
   "scripts": {
-    "build": "echo 'Build script placeholder'",
+    "build": "webpack --mode=production",
+    "build:dev": "webpack --mode=development",
     "test": "echo 'Test script placeholder'",
     "lint": "echo 'Lint script placeholder'"
   },
-  "keywords": ["privacy", "chrome-extension", "pii-protection"],
-  "devDependencies": {},
-  "dependencies": {}
+  "keywords": [
+    "privacy",
+    "chrome-extension",
+    "pii-protection"
+  ],
+  "devDependencies": {
+    "@babel/core": "^7.28.3",
+    "@babel/preset-react": "^7.27.1",
+    "babel-loader": "^10.0.0",
+    "copy-webpack-plugin": "^13.0.1",
+    "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1"
+  }
 }
