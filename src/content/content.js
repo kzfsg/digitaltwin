@@ -129,29 +129,32 @@ function attachChatbotListener(field) {
   if (field._chatbotListenerAttached) return;
   field._chatbotListenerAttached = true;
 
-    // Debounced text detection with highlighting
-    const debouncedDetect = debounce(async (text) => {
-        if (text.trim().length > 0) {
-            try {
-                const result = await detectPII(text);
-                
-                // Show in overlay
-                showInOverlay(text, field);
-                
-                // Highlight individual PII entities with badges
-                if (window.piiHighlighter && result && result.entities) {
-                    window.piiHighlighter.addPIIIndicators(field, result.entities);
-                }
-            } catch (error) {
-                console.warn('PII detection failed:', error);
-            }
-        } else {
-            // Clear highlights when field is empty
-            if (window.piiHighlighter) {
-                window.piiHighlighter.clearIndicators(field);
-            }
+  // Debounced text detection with highlighting
+  const debouncedDetect = debounce(async (text) => {
+    if (text.trim().length > 0) {
+      try {
+        const result = await detectPII(text);
+        const resultFake = await detectPIIWithFake(text);
+
+        const overlayText = `text: ${resultFake.original_text}\nDetected: ${resultFake.anonymized_text}`;
+
+        // Show in overlay
+        showInOverlay(overlayText, field);
+
+        // Highlight individual PII entities with badges
+        if (window.piiHighlighter && result && result.entities) {
+          window.piiHighlighter.addPIIIndicators(field, result.entities);
         }
-    }, 300);
+      } catch (error) {
+        console.warn("PII detection failed:", error);
+      }
+    } else {
+      // Clear highlights when field is empty
+      if (window.piiHighlighter) {
+        window.piiHighlighter.clearIndicators(field);
+      }
+    }
+  }, 300);
 
   // Listen for input events
   field.addEventListener("input", (event) => {
@@ -242,18 +245,26 @@ const observer = new MutationObserver((mutationsList) => {
 observer.observe(document.body, { childList: true, subtree: true });
 scanChatbotInputs();
 
-console.log('🛡️ DigitalTwin: AI chatbot detection active');
-console.log('🛡️ Found inputs:', document.querySelectorAll('input[type="text"], textarea, div[contenteditable="true"]').length);
-console.log('🛡️ Backend API available:', typeof detectPII !== 'undefined');
-console.log('🛡️ PII Highlighter available:', typeof window.piiHighlighter !== 'undefined');
+console.log("🛡️ DigitalTwin: AI chatbot detection active");
+console.log(
+  "🛡️ Found inputs:",
+  document.querySelectorAll(
+    'input[type="text"], textarea, div[contenteditable="true"]'
+  ).length
+);
+console.log("🛡️ Backend API available:", typeof detectPII !== "undefined");
+console.log(
+  "🛡️ PII Highlighter available:",
+  typeof window.piiHighlighter !== "undefined"
+);
 
 // Test PII detection after a short delay
 setTimeout(async () => {
   try {
-    console.log('🛡️ Testing PII detection...');
-    const testResult = await detectPII('My email is test@example.com');
-    console.log('🛡️ Test result:', testResult);
+    console.log("🛡️ Testing PII detection...");
+    const testResult = await detectPII("My email is test@example.com");
+    console.log("🛡️ Test result:", testResult);
   } catch (error) {
-    console.log('🛡️ Test failed:', error);
+    console.log("🛡️ Test failed:", error);
   }
 }, 2000);
