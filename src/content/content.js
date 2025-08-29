@@ -136,7 +136,7 @@ function attachChatbotListener(field) {
         const result = await detectPII(text);
         const resultFake = await detectPIIWithFake(text);
 
-        const overlayText = `text: ${resultFake.original_text}\nDetected: ${resultFake.anonymized_text}`;
+        const overlayText = `${resultFake.original_text}\n\nDetected: ${resultFake.anonymized_text}`;
 
         // Show in overlay
         showInOverlay(overlayText, field);
