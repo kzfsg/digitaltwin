@@ -3,10 +3,28 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import re
 from faker import Faker
-from typing import Optional, Dict
+from typing import Optional, Dict, List
+from fastapi import FastAPI
+from pydantic import BaseModel
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 faker = Faker()
+
+tokenizer = AutoTokenizer.from_pretrained("iiiorg/piiranha-v1-detect-personal-information")
+model = AutoModelForTokenClassification.from_pretrained("iiiorg/piiranha-v1-detect-personal-information")
+
+pii_detector = pipeline(
+    "token-classification",
+    model=model,
+    tokenizer=tokenizer,
+    aggregation_strategy="simple"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -525,30 +543,83 @@ async def replace_with_fake(request: TextRequest):
 @app.post("/detect_pii")
 async def detect_pii(request: TextRequest):
     """
-    Basic PII detection endpoint - mainly for emails, phones, SSNs.
-    Frontend handles name detection and most PII logic via regex-patterns.js
+    PII detection endpoint using Piiranha model first, then regex fallback.
+    Returns detected entities with anonymized text.
     """
     text = request.text
+    original_text = text
+    all_entities = []
+    piiranha_entities = 0
+    regex_entities = 0
     
-    # Basic backend detection for high-confidence patterns
-    results = detect_basic_pii(text)
-
-    # Create anonymized version
-    anonymized_text = text
-    results_sorted = sorted(results, key=lambda x: x["start"], reverse=True)
-
-    for item in results_sorted:
+    try:
+        # Primary: Use Piiranha model for PII detection
+        logger.info("🔍 Using Piiranha model for primary PII detection")
+        piiranha_results = pii_detector(text)
+        
+        # Convert Piiranha results to our standard format
+        for item in piiranha_results:
+            all_entities.append({
+                "start": int(item["start"]),
+                "end": int(item["end"]), 
+                "entity_group": str(item["entity_group"]).upper(),
+                "confidence": float(item.get("score", 0.9))
+            })
+        
+        piiranha_entities = len(piiranha_results)
+        logger.info(f"✅ Piiranha model found {piiranha_entities} PII entities")
+            
+    except Exception as e:
+        logger.error(f"❌ Piiranha model failed: {e}")
+        logger.info("🔄 Falling back to regex-only detection")
+    
+    # Fallback: Use regex detection for additional coverage
+    try:
+        logger.info("🔍 Using regex detection for additional coverage")
+        regex_results = detect_basic_pii(text)
+        
+        # Merge results, avoiding duplicates by checking overlap
+        regex_added = 0
+        for regex_entity in regex_results:
+            overlaps = False
+            for existing in all_entities:
+                if (regex_entity['start'] < existing['end'] and 
+                    regex_entity['end'] > existing['start']):
+                    overlaps = True
+                    break
+            if not overlaps:
+                all_entities.append(regex_entity)
+                regex_added += 1
+        
+        regex_entities = regex_added
+        logger.info(f"✅ Regex detection added {regex_entities} additional PII entities")
+                
+    except Exception as e:
+        logger.error(f"❌ Regex detection failed: {e}")
+    
+    # Log final detection summary
+    total_entities = len(all_entities)
+    logger.info(f"📊 Detection Summary: {total_entities} total entities (Piiranha: {piiranha_entities}, Regex: {regex_entities})")
+    
+    # Sort entities by position
+    all_entities.sort(key=lambda x: x['start'])
+    
+    # Create anonymized text
+    anonymized_text = original_text
+    entities_sorted = sorted(all_entities, key=lambda x: x["start"], reverse=True)
+    
+    for item in entities_sorted:
         start, end = item["start"], item["end"]
-        entity = item["entity_group"].upper() 
+        entity = item["entity_group"].upper()
         anonymized_text = anonymized_text[:start] + f"[{entity}]" + anonymized_text[end:]
-
+    
     return {
         "anonymized_text": anonymized_text,
-        "entities": results,
-        "original_text": text
+        "entities": all_entities,
+        "original_text": original_text
     }
 
 @app.get("/")
 async def root():
-    return {"message": "DigitalTwin PII Detection API", "status": "active"}
+    return {"message": "DigitalTwin PII Detection API", "status": "active", "endpoints": ["/detect_pii", "/detect_pii_hybrid", "/replace_with_fake"]}
 
