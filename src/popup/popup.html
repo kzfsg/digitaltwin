@@ -8,7 +8,8 @@
     <style>
         body {
             width: 350px;
-            padding: 15px;
+            padding: 0;
+            margin: 0;
             font-family: "Figtree", sans-serif;
             background: black;
             color: white;
@@ -17,11 +18,14 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
+            background: black;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 0;
         }
         .header {
             text-align: center;
-            border-bottom: 2px solid #5ce1e6;
-            padding-bottom: 10px;
+
         }
         .header h2 {
             margin: 0;
@@ -52,6 +56,7 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
+            font-family: "Figtree", sans-serif;
         }
         button:hover {
             background: #4dd4da;
@@ -128,11 +133,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>🛡️ DigitalTwin</h2>
+            <h2>DigitalTwin</h2>
             <div class="subtitle">AI Input Monitor</div>
         </div>
         
-        
+        <button id="toggleDetection">Pause Detection</button>
+
         <div class="status-section">
             <div class="status-title">Censor Settings</div>
 
@@ -181,7 +187,6 @@
         </div>
 
         
-        <button id="toggleDetection">Pause Detection</button>
     </div>
 
     <script src="popup.js"></script>
