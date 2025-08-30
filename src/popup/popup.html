@@ -109,6 +109,63 @@
         .clear-btn:hover {
             background: #d12851;
         }
+        #fieldsContainer { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 6px 12px; 
+        }
+        #fieldsContainer label { 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            cursor: pointer; 
+        }
+        .mini-controls { 
+            display:flex; 
+            gap:8px; 
+            margin:6px 0; 
+        }
+        .pill-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #ffffff80;
+      background: #111;
+      color: #eee;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .2px;
+      cursor: pointer;
+      transition: transform .06s ease, background .15s ease, color .15s ease, border-color .15s ease;
+    }
+    .pill:hover { 
+        transform: translateY(-1px); 
+    }
+    .pill.active { 
+        background: #5ce1e6; 
+        color: #111; 
+        border-color: white; 
+    }
+    details.more-entities summary {
+      cursor: pointer; 
+      user-select: none; 
+      color: #5ce1e6; 
+      font-weight: 700;
+      padding: 6px 0;
+    }
+    .dropdown-wrap { 
+        display: grid; 
+        gap: 8px; 
+    }
+    select.entity-select {
+      width: 100%; 
+      background: #000; 
+      color: #fff; 
+      border: 1px solid white; 
+      border-radius: 6px; 
+      padding: 6px; 
+      font-size: 12px;
+    }
     </style>
 </head>
 <body>
@@ -127,6 +184,53 @@
         </div>
         
         <div class="status-section">
+            <div class="status-title">Censor Settings</div>
+
+            <div class="pill-grid" id="quickPills">
+                <button class="pill active" id="btnName"
+                    data-entities="GIVENNAME,SURNAME">Name</button>
+                <button class="pill active" id="btnEmail"
+                    data-entities="EMAIL">Email</button>
+                <button class="pill active" id="btnAddress"
+                    data-entities="STREET,BUILDINGNUM,CITY,ZIPCODE">Address</button>
+                <button class="pill active" id="btnCC"
+                    data-entities="CREDITCARDNUMBER">CC Number</button>
+                <button class="pill active" id="btnDOB"
+                    data-entities="DATEOFBIRTH">DOB</button>
+                <button class="pill active" id="btnUsername"
+                    data-entities="USERNAME">Username</button>
+            </div>
+
+            <details class="more-entities" id="moreEntities">
+                <summary>More entities</summary>
+                <div class="dropdown-wrap">
+                    <label for="otherEntities" style="font-size:12px;color:#bbb;">Choose additional entities to censor (Ctrl/Cmd+click for multiple)</label>
+                    <select id="otherEntities" class="entity-select" multiple size="8">
+                        <option value="ACCOUNTNUM">Bank Account Number</option>
+                        <option value="DRIVERLICENSENUM">Driver License Number</option>
+                        <option value="IDCARDNUM">ID Card Number (NRIC/FIN-like)</option>
+                        <option value="PASSWORD">Password</option>
+                        <option value="SOCIALNUM">CPF / Social Number</option>
+                        <option value="TAXNUM">Tax Number</option>
+                        <option value="TELEPHONENUM">Telephone Number</option>
+                        <option value="BUILDINGNUM">Building Number</option>
+                        <option value="CITY">City</option>
+                        <option value="STREET">Street</option>
+                        <option value="ZIPCODE">Postal Code</option>
+                    </select>
+                <div class="mini-controls">
+                    <button id="applyOtherEntities" style="padding:6px 10px">Apply</button>
+                    <button id="clearOtherEntities" class="clear-btn" style="padding:6px 10px">Clear</button>
+                </div>
+                </div>
+            </details>
+            <div class="mini-controls">
+                <button id="selectAll" style="padding:4px 8px">Select all</button>
+                <button id="selectNone" style="padding:4px 8px">Select none</button>
+            </div>
+        </div>
+
+        <div class="status-section">
             <div class="status-title">Recent Detections</div>
             <div id="detectionLog" class="detection-log">
                 <div class="no-detections">No text detected yet. Start typing in AI chatbots!</div>
@@ -136,6 +240,7 @@
         
         <button id="toggleDetection">Pause Detection</button>
     </div>
+
     <script src="popup.js"></script>
 </body>
 </html>
