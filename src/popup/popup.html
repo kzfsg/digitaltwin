@@ -194,9 +194,12 @@
     details.more-entities summary {
       cursor: pointer; 
       user-select: none; 
-      color: #5ce1e6; 
+      color: white; 
       font-weight: 700;
       padding: 6px 0;
+    }
+    details.more-entities[open] summary {
+      color: #5ce1e6;
     }
     .dropdown-wrap { 
         display: grid; 
@@ -264,8 +267,8 @@
                 </div>
             </details>
             <div class="mini-controls">
-                <button id="selectAll" style="padding:4px 8px">Select all</button>
-                <button id="selectNone" style="padding:4px 8px">Select none</button>
+                <button id="selectAll" style="padding:4px 8px;font-size:12px;font-weight:800;letter-spacing:.2px">Select all</button>
+                <button id="selectNone" style="padding:4px 8px;font-size:12px;font-weight:800;letter-spacing:.2px">Select none</button>
             </div>
         </div>
         
