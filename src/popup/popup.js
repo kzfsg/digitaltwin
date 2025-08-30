@@ -1,4 +1,6 @@
 let isDetectionActive = true;
+let detectionLog = [];
+let detectionCount = 0;
 
 const SETTINGS_KEY = "dt-settings";
 const ENTITY_LABELS = [
@@ -26,9 +28,16 @@ document.addEventListener('DOMContentLoaded', function() {
     wireGlobalControls();
     updateUI();
     
-    // Set up event listeners
-    document.getElementById('clearLog').addEventListener('click', clearLog);
-    document.getElementById('toggleDetection').addEventListener('click', toggleDetection);
+    // Set up event listeners with null checks
+    const clearLogBtn = document.getElementById('clearLog');
+    if (clearLogBtn) {
+        clearLogBtn.addEventListener('click', clearLog);
+    }
+    
+    const toggleBtn = document.getElementById('toggleDetection');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', toggleDetection);
+    }
     
     // Listen for messages from content scripts
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -46,8 +55,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Load settings from storage
 function loadSettings() {
-    chrome.storage.local.get(['isDetectionActive'], (result) => {
+    chrome.storage.local.get(['isDetectionActive', 'detectionLog', 'detectionCount'], (result) => {
         isDetectionActive = result.isDetectionActive !== false;
+        detectionLog = result.detectionLog || [];
+        detectionCount = result.detectionCount || 0;
         updateUI();
     });
     loadEnabledLabels();
@@ -423,4 +434,17 @@ function escapeHtml(text) {
 
 function setStatus(msg) {
     console.log("Status:", msg);
+}
+
+// Clear detection log
+function clearLog() {
+    detectionLog = [];
+    detectionCount = 0;
+    
+    chrome.storage.local.set({
+        detectionLog: [],
+        detectionCount: 0
+    });
+    
+    updateUI();
 }
