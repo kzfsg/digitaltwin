@@ -67,15 +67,105 @@ function createOverlay() {
 }
 
 let overlay = null;
+let persistentReplaceBtn = null;
+let currentAnonymizedText = null;
+let currentField = null;
+
+// Create persistent replace button at bottom right
+function createPersistentReplaceButton() {
+  if (persistentReplaceBtn) return persistentReplaceBtn;
+
+  const button = document.createElement("button");
+  button.id = "digitaltwin-persistent-replace";
+  button.textContent = "Replace PII";
+  button.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 10001;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+    display: none;
+  `;
+
+  // Hover effects
+  button.addEventListener('mouseenter', () => {
+    button.style.background = '#45a049';
+    button.style.transform = 'translateY(-2px)';
+    button.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+  });
+
+  button.addEventListener('mouseleave', () => {
+    button.style.background = '#4CAF50';
+    button.style.transform = 'translateY(0)';
+    button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+  });
+
+  // Click handler
+  button.addEventListener('click', () => {
+    if (currentField && currentAnonymizedText) {
+      if (typeof currentField.value !== 'undefined') {
+        currentField.value = currentAnonymizedText;
+        currentField.dispatchEvent(new Event('input', { bubbles: true }));
+        currentField.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (currentField.contentEditable === 'true') {
+        currentField.textContent = currentAnonymizedText;
+        currentField.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      console.log('🎯 Text replaced with anonymized version');
+      hidePersistentReplaceButton();
+    }
+  });
+
+  document.body.appendChild(button);
+  persistentReplaceBtn = button;
+  return button;
+}
+
+// Show persistent replace button
+function showPersistentReplaceButton(field, anonymizedText) {
+  currentField = field;
+  currentAnonymizedText = anonymizedText;
+  
+  const button = createPersistentReplaceButton();
+  button.style.display = 'block';
+  
+  // Auto-hide after 15 seconds
+  setTimeout(() => {
+    hidePersistentReplaceButton();
+  }, 15000);
+}
+
+// Hide persistent replace button
+function hidePersistentReplaceButton() {
+  if (persistentReplaceBtn) {
+    persistentReplaceBtn.style.display = 'none';
+    currentField = null;
+    currentAnonymizedText = null;
+  }
+}
 
 // Display detected text in overlay
-function showInOverlay(text, field) {
+function showInOverlay(text, field, anonymizedText = null) {
   // Check if overlay is enabled before showing
   chrome.storage.local.get(['isOverlayActive'], (result) => {
     const isOverlayEnabled = result.isOverlayActive !== false; // Default to true
     
     // Always send detection to popup regardless of overlay state
     sendDetectionToPopup(text, field);
+    
+    // Show persistent replace button if anonymized text is available
+    if (anonymizedText) {
+      showPersistentReplaceButton(field, anonymizedText);
+    }
     
     // Only show overlay if enabled
     if (!isOverlayEnabled) {
@@ -157,8 +247,24 @@ function attachChatbotListener(field) {
 
         const overlayText = `${resultFake.original_text}\n\nDetected: ${resultFake.anonymized_text}`;
 
-        // Show in overlay
-        showInOverlay(overlayText, field);
+        // Store anonymized text in Chrome storage
+        try {
+          const storageKey = `anonymized_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          await chrome.storage.local.set({
+            [storageKey]: {
+              original_text: resultFake.original_text,
+              anonymized_text: resultFake.anonymized_text,
+              timestamp: new Date().toISOString(),
+              entities: result.entities || []
+            }
+          });
+          console.log('🎯 Stored anonymized text with key:', storageKey);
+        } catch (error) {
+          console.error('❌ Failed to store anonymized text:', error);
+        }
+
+        // Show in overlay with replace button
+        showInOverlay(overlayText, field, resultFake.anonymized_text);
 
         // Highlight individual PII entities with badges
         if (
