@@ -82,7 +82,7 @@ function createPersistentReplaceButton() {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: #4CAF50;
+    background: #4dd4da;
     color: white;
     border: none;
     padding: 12px 20px;
@@ -96,15 +96,27 @@ function createPersistentReplaceButton() {
     display: none;
   `;
 
-  // Hover effects
+  // Hover effects - will be updated based on button state
   button.addEventListener('mouseenter', () => {
-    button.style.background = '#45a049';
+    if (!button.disabled) {
+      // Pink hover when PII detected
+      button.style.background = '#c42850';
+    } else {
+      // Darker turquoise hover when no PII
+      button.style.background = '#3cc4ca';
+    }
     button.style.transform = 'translateY(-2px)';
     button.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
   });
 
   button.addEventListener('mouseleave', () => {
-    button.style.background = '#4CAF50';
+    if (!button.disabled) {
+      // Pink when PII detected
+      button.style.background = '#e33262';
+    } else {
+      // Turquoise when no PII
+      button.style.background = '#4dd4da';
+    }
     button.style.transform = 'translateY(0)';
     button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
   });
@@ -136,21 +148,36 @@ function showPersistentReplaceButton(field, anonymizedText) {
   currentAnonymizedText = anonymizedText;
   
   const button = createPersistentReplaceButton();
-  button.style.display = 'block';
   
-  // Auto-hide after 15 seconds
-  setTimeout(() => {
-    hidePersistentReplaceButton();
-  }, 15000);
+  // Update button text and state based on whether we have anonymized text
+  if (anonymizedText) {
+    button.textContent = 'Replace PII';
+    button.style.opacity = '1';
+    button.style.cursor = 'pointer';
+    button.style.background = '#e33262';
+    button.disabled = false;
+    button.style.display = 'block';
+  } else {
+    button.textContent = 'No PII Detected';
+    button.style.opacity = '0.6';
+    button.style.cursor = 'default';
+    button.style.background = '#4dd4da';
+    button.disabled = true;
+    button.style.display = 'block';
+  }
 }
 
-// Hide persistent replace button
-function hidePersistentReplaceButton() {
-  if (persistentReplaceBtn) {
-    persistentReplaceBtn.style.display = 'none';
-    currentField = null;
-    currentAnonymizedText = null;
-  }
+// Update button to show no PII state
+function updateButtonToNoPII() {
+  const button = createPersistentReplaceButton();
+  button.textContent = 'No PII Detected';
+  button.style.opacity = '0.6';
+  button.style.cursor = 'default';
+  button.style.background = '#4dd4da';
+  button.disabled = true;
+  button.style.display = 'block';
+  currentField = null;
+  currentAnonymizedText = null;
 }
 
 // Display detected text in overlay
@@ -292,6 +319,8 @@ function attachChatbotListener(field) {
       if (window.piiHighlighter) {
         window.piiHighlighter.clearIndicators(field);
       }
+      // Update button to show no PII state
+      updateButtonToNoPII();
     }
   }, 300);
 
@@ -383,6 +412,10 @@ const observer = new MutationObserver((mutationsList) => {
 // Initialize
 observer.observe(document.body, { childList: true, subtree: true });
 scanChatbotInputs();
+
+// Initialize persistent button on page load
+createPersistentReplaceButton();
+updateButtonToNoPII();
 
 console.log("🛡️ DigitalTwin: AI chatbot detection active");
 console.log(
