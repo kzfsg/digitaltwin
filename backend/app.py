@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import re
 from faker import Faker
+from typing import Optional, Dict
 
 app = FastAPI()
 faker = Faker()
@@ -17,6 +18,7 @@ app.add_middleware(
 
 class TextRequest(BaseModel):
     text: str
+    enabled_labels: Optional[Dict[str, bool]] = None
 
 def detect_basic_pii(text):
     """Basic PII detection including Singapore names and phone numbers"""
@@ -139,14 +141,20 @@ def detect_basic_pii(text):
     
     return filtered_entities
 
-def replace_with_fake_data(results, text):
-    """Replace detected entities with random fake persona details"""
+def replace_with_fake_data(results, text, enabled_labels=None):
+    """Replace detected entities with fake data only if enabled"""
+    if enabled_labels is None:
+        enabled_labels = {}  
+
     anonymized_text = text
     results_sorted = sorted(results, key=lambda x: x["start"], reverse=True)
 
     for item in results_sorted:
-        start, end = item["start"], item["end"]
         entity_type = item["entity_group"].upper()
+        if not enabled_labels.get(entity_type, True):
+            continue 
+
+        start, end = item["start"], item["end"]
 
         if entity_type == "EMAIL":
             replacement = faker.email()
@@ -159,25 +167,28 @@ def replace_with_fake_data(results, text):
         else:
             replacement = f"[{entity_type}]"
 
-        # Replace in text
         anonymized_text = anonymized_text[:start] + replacement + anonymized_text[end:]
-        # Track replacement
-        item["replacement"] = replacement  
+        item["replacement"] = replacement
 
     return anonymized_text, results
+
 
 @app.post("/replace_with_fake")
 async def replace_with_fake(request: TextRequest):
     text = request.text
+    enabled_labels = request.enabled_labels 
     results = detect_basic_pii(text)
 
-    anonymized_text, updated_entities = replace_with_fake_data(results, text)
+    anonymized_text, updated_entities = replace_with_fake_data(
+        results, text, enabled_labels
+    )
 
     return {
         "anonymized_text": anonymized_text,
         "entities": updated_entities,
         "original_text": text
     }
+
 
 
 @app.post("/detect_pii")

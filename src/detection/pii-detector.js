@@ -54,10 +54,16 @@ async function detectPII(text) {
 
 async function detectPIIWithFake(text) {
   try {
+    // Get labels from Chrome storage
+    const obj = await chrome.storage.sync.get(SETTINGS_KEY);
+    const saved = obj[SETTINGS_KEY]?.enabledLabels;
+    const enabledLabels = {};
+    for (const l of ENTITY_LABELS) enabledLabels[l] = saved?.[l] !== false;
+
     const response = await fetch("http://127.0.0.1:8000/replace_with_fake", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, enabled_labels: enabledLabels }),
     });
 
     const data = await response.json();
