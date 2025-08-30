@@ -4,109 +4,113 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DigitalTwin is a Chrome extension for automatic PII protection using AI-generated personas. The system consists of a Chrome extension frontend and a FastAPI backend with ML-based PII detection using the Piiranha model.
+DigitalTwin is a Chrome extension for automatic PII detection and highlighting with a configurable censoring system. The system consists of a Chrome extension frontend and a FastAPI backend using regex-based PII detection optimized for Singapore patterns.
 
 ## Development Commands
 
-### Backend (FastAPI + Transformers)
-- `cd backend && pip install -r requirements.txt` - Install Python dependencies
+### Backend (FastAPI + Regex Detection)
+- `cd backend && pip install -r requirements.txt` - Install Python dependencies (fastapi, uvicorn)
 - `cd backend && uvicorn app:app --reload --host 127.0.0.1 --port 8000` - Start the PII detection API server
-- Backend runs on `http://127.0.0.1:8000` with endpoints at `/detect_pii`
+- Backend runs on `http://127.0.0.1:8000` with main endpoint `/detect_pii`
 
 ### Extension Development  
-- `npm run build` - Build script placeholder (not implemented)
-- `npm run test` - Test script placeholder (not implemented)
-- `npm run lint` - Lint script placeholder (not implemented)
+- No build process required - direct JavaScript files
+- Extension loading: Chrome → `chrome://extensions/` → Enable "Developer mode" → "Load unpacked" → select project root
+- Reload extension after code changes and refresh test pages
 
-### Extension Loading
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" 
-3. Click "Load unpacked" and select the project root directory
-4. Reload extension and refresh test pages after code changes
+### Testing
+- Open `test-debug.html` or `test.html` for manual testing
+- Monitor browser console for debug messages starting with 🛡️ and 🎯
+- Use extension popup to view detection logs and configure settings
 
 ## Architecture Overview
 
-### Hybrid System Architecture
-The project uses a **hybrid architecture** combining a Chrome extension frontend with a Python backend:
+### Hybrid Detection System
+The project uses a **dual-layer PII detection approach**:
 
-**Chrome Extension (Frontend)**
-- Content scripts monitor AI chatbot inputs across web pages
-- Popup interface for detection logs and controls  
-- Background script handles cross-tab communication
+**Primary: Backend API** (`backend/app.py`)
+- Regex-based detection optimized for Singapore PII patterns
+- Handles emails, phones (8-digit Singapore mobiles), SSNs, names
+- Returns both anonymized text and entity arrays for frontend highlighting
 
-**FastAPI Backend (PII Detection)**
-- Uses Transformers library with `iiiorg/piiranha-v1-detect-personal-information` model
-- Provides REST API at `POST /detect_pii` 
-- Returns anonymized text with PII entities replaced by `[ENTITY_TYPE]` tags
+**Fallback: Frontend Regex** (`src/detection/regex-patterns.js`) 
+- Local backup detection when backend is unavailable
+- Same patterns as backend for consistency
 
-### Critical Integration Points
+### Script Loading Architecture (Critical)
+Chrome extension compatibility requires specific loading order in `manifest.json`:
+```json
+"js": ["src/ui/pii-highlighter.js", "src/detection/regex-patterns.js", "src/detection/pii-detector.js", "src/content/content.js"]
+```
 
-**PII Detection Flow:**
-1. Content script detects text input in AI chatbots
-2. Makes HTTP POST to `http://127.0.0.1:8000/detect_pii` 
-3. Backend processes text with Piiranha model
-4. Returns anonymized version with PII masked
-5. Extension displays both original and anonymized text in overlay
-
-**Script Loading Architecture:**
-- `pii-detector.js` loads first, exposes global functions via `window.detectPII`
-- `content.js` loads second, calls global functions directly
-- No ES6 imports/exports - uses global function pattern for Chrome extension compatibility
+**Global Function Pattern:**
+- `pii-highlighter.js`: Exposes `window.piiHighlighter = new PIIHighlighter()`
+- `pii-detector.js`: Exposes `window.detectPII = detectPII` and `window.debounce = debounce`
+- `content.js`: Calls global functions directly (no ES6 imports due to Chrome extension limitations)
 
 ### Key Components
 
-**Content Script (`src/content/content.js`)**
-- AI chatbot selectors for ChatGPT, Claude, Gemini, Bing
-- Creates overlay UI with detection results
-- Debounced text detection to avoid performance issues
-- Mutation observer for dynamic content
+**Content Script** (`src/content/content.js`)
+- Monitors AI chatbot inputs using selectors for ChatGPT, Claude, Gemini, Bing
+- Debounced PII detection (300ms delay) to avoid performance issues
+- Creates overlay UI showing anonymized text
+- Mutation observer for dynamically loaded content
 
-**PII Detector (`src/detection/pii-detector.js`)**
-- Async function making HTTP requests to backend API
-- Replaces previous regex-based detection
-- Global function exposure: `window.detectPII = detectPII`
+**PII Highlighter** (`src/ui/pii-highlighter.js`) 
+- Class-based highlighting system with precise text positioning
+- Creates visual overlays that highlight only specific PII words (not entire sentences)
+- Type-specific colors: purple for names, blue for emails, green for phones
+- Non-intrusive indicators and floating badges
 
-**Fallback Detection (`src/detection/regex-patterns.js`)**
-- Contains export-based regex patterns as backup
-- Includes phone, email, SSN, address detection patterns
+**Popup Interface** (`src/popup/popup.js`, `src/popup/popup.html`)
+- Censor settings with pill-based entity selection (Name, Email, Address, etc.)
+- Detection log showing PII items found with timestamps
+- Toggle detection on/off functionality
+- Chrome storage integration for persistent settings
 
-**Backend API (`backend/app.py`)**
-- FastAPI server with Piiranha transformer model
-- Token classification pipeline with aggregation
-- Processes entities in reverse order to maintain text positions
+**Backend API** (`backend/app.py`)
+- FastAPI server with `detect_basic_pii()` function
+- Singapore-focused patterns: names like "lim jun jie", "sally wong", phones like "92124222"
+- Case-insensitive detection with comprehensive false positive filtering
+- Entity deduplication and overlap handling
 
-### Development Dependencies
+### Singapore PII Patterns
+The system is specifically tuned for Singapore context:
+- **Names**: Multi-part Chinese names, case-insensitive detection with context patterns ("I am X", "my name is X")
+- **Phone Numbers**: 8-digit mobile patterns (8XXXXXXX, 9XXXXXXX), +65 country code formats
+- **False Positive Filtering**: Extensive filtering for common English words that might match name patterns
 
-**Backend Requirements:**
-- `fastapi` - Web framework
-- `uvicorn` - ASGI server  
-- `transformers` - Hugging Face ML models
-- `torch` - PyTorch backend
-
-**Extension Dependencies:**
-- Chrome extension APIs: `chrome.runtime`, `chrome.storage`, `chrome.tabs`
-- No external JavaScript dependencies
-
-### Team Structure (From DEVELOPMENT.md)
-- Person 1: Extension framework + popup UI
-- Person 2: Storage + encryption systems  
-- Person 3: Content scripts + text interception
-- Person 4: PII detection algorithms
-- Person 5: Background scripts + persona generation
+### PII Detection Flow
+1. User types in AI chatbot input field
+2. Content script detects input via debounced event listener
+3. `detectPII()` calls backend API at `http://127.0.0.1:8000/detect_pii`
+4. Backend returns entities array with start/end positions
+5. `addPIIIndicators()` creates precise text overlays highlighting only PII words
+6. Detection sent to popup for logging via `chrome.runtime.sendMessage`
 
 ### Critical Development Notes
 
-**Chrome Extension Limitations:**
-- Content scripts cannot use ES6 imports - must use global functions
-- Extension context invalidation requires error handling in `chrome.runtime.sendMessage`
-- Manifest V3 requires specific permission declarations
+**Chrome Extension Constraints:**
+- Cannot use ES6 imports/exports in content scripts - must use global window functions
+- Extension context can be invalidated - wrap `chrome.runtime.sendMessage` in try/catch
+- Manifest V3 permissions required: `["activeTab", "scripting", "tabs", "notifications", "storage"]`
 
 **Backend Integration:**
-- Backend must be running locally on port 8000 for PII detection to work
-- API calls are made directly from content scripts (no CORS issues in extension context)
-- Transformer model downloads automatically on first run (large initial download)
+- Backend must be running on localhost:8000 for detection to work
+- Content scripts make direct HTTP calls (no CORS issues in extension context) 
+- Fallback to local regex if backend unavailable
+
+**Highlighting System:**
+- Uses positioned overlays instead of DOM text manipulation to avoid disrupting user input
+- Precise text measurement with temporary measuring div to calculate PII word positions
+- Auto-cleanup of highlights after 5 seconds to prevent visual clutter
 
 **Testing Setup:**
-- `test.html` contains AI chatbot-style inputs for testing
-- Overlay appears in top-right corner when typing
-- Check browser console for PII detection logs and API responses
+- `test-debug.html` includes console logging for debugging detection flow
+- Watch for console messages: "🛡️ PII Highlighter available", "🎯 Calling addPIIIndicators"
+- Extension popup shows real-time detection log with entity breakdown
+
+### Storage and Settings
+- Uses `chrome.storage.local` for detection logs and active state
+- Uses `chrome.storage.sync` for cross-device settings synchronization
+- Entity selection stored as boolean flags for each PII type (EMAIL, PERSON, PHONE, etc.)

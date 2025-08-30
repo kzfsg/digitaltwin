@@ -67,12 +67,23 @@ class PIIHighlighter {
   // Add PII indicators with precise text highlighting
   addPIIIndicators(field, piiEntities) {
     console.log('🎯 Adding PII indicators:', piiEntities);
+    console.log('🎯 Field details:', {
+      tagName: field.tagName,
+      value: field.value?.substring(0, 50),
+      textContent: field.textContent?.substring(0, 50),
+      rect: field.getBoundingClientRect()
+    });
     
     // Remove existing indicators
     this.clearIndicators(field);
 
     // Create highlight overlays for each PII entity
-    this.createTextHighlights(field, piiEntities);
+    try {
+      this.createTextHighlights(field, piiEntities);
+    } catch (error) {
+      console.warn('🎯 Precise highlighting failed, using simple approach:', error);
+      this.createSimpleHighlights(field, piiEntities);
+    }
     
     // Add floating indicator showing summary
     const indicator = document.createElement('div');
@@ -108,9 +119,14 @@ class PIIHighlighter {
 
   // Create precise text highlights using positioned overlays that highlight only the specific PII text
   createTextHighlights(field, entities) {
+    console.log('🎯 Creating text highlights for:', entities.length, 'entities');
+    
     const fieldRect = field.getBoundingClientRect();
     const fieldStyle = window.getComputedStyle(field);
     const text = field.value || field.textContent || '';
+    
+    console.log('🎯 Text to highlight:', text.substring(0, 100));
+    console.log('🎯 Field rect:', fieldRect);
     
     // Create a measuring element to calculate text positions
     const measuringDiv = document.createElement('div');
@@ -136,8 +152,8 @@ class PIIHighlighter {
       const beforeWidth = measuringDiv.offsetWidth;
       
       measuringDiv.textContent = entityText;
-      const entityWidth = measuringDiv.offsetWidth;
-      const entityHeight = measuringDiv.offsetHeight;
+      const entityWidth = Math.max(measuringDiv.offsetWidth, 10); // Minimum width
+      const entityHeight = Math.max(measuringDiv.offsetHeight, 16); // Minimum height
       
       // Create highlight overlay for the specific PII text
       const highlight = document.createElement('div');
@@ -154,9 +170,21 @@ class PIIHighlighter {
       highlight.style.top = (fieldRect.top + paddingTop + borderTop) + 'px';
       highlight.style.width = entityWidth + 'px';
       highlight.style.height = entityHeight + 'px';
-      highlight.style.zIndex = '1000';
+      highlight.style.zIndex = '10000';
       highlight.style.pointerEvents = 'none';
       highlight.style.borderRadius = '3px';
+      // Fallback background color if CSS classes don't work
+      highlight.style.background = 'rgba(255, 107, 107, 0.3)';
+      highlight.style.borderBottom = '2px solid #ff6b6b';
+      
+      console.log('🎯 Created highlight element:', {
+        entityText,
+        left: highlight.style.left,
+        top: highlight.style.top,
+        width: highlight.style.width,
+        height: highlight.style.height,
+        zIndex: highlight.style.zIndex
+      });
       
       document.body.appendChild(highlight);
       

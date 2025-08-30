@@ -16,7 +16,7 @@
     {
       "matches": ["<all_urls>"],
       "js": ["src/ui/pii-highlighter.js", "src/detection/regex-patterns.js", "src/detection/pii-detector.js", "src/content/content.js"],
-      "css": ["src/ui/pii-highlighter.css"],
+      "css": ["src/ui/pii-highlighter.css", "src/ui/pii-indicators.css"],
       "run_at": "document_idle"
     }
   ]
