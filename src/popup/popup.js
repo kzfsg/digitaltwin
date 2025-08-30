@@ -9,6 +9,14 @@ const ENTITY_LABELS = [
 
 let enabledLabels = {};
 
+// Utility function to log enabled settings
+function logEnabledSettings() {
+    console.log("=🔒 DigitalTwin Settings:", {
+        isDetectionActive,
+        enabledLabels: { ...enabledLabels }
+    });
+}
+
 const GROUPS = {
     btnName: ["GIVENNAME","SURNAME"],
     btnEmail: ["EMAIL"],
@@ -19,23 +27,30 @@ const GROUPS = {
 };
 
 // Initialize popup
-document.addEventListener('DOMContentLoaded', function() {
-    loadSettings();
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadSettings();
     wireQuickPills();
     wireMoreEntities();
     wireGlobalControls();
     updateUI();
     
     console.log("=� DigitalTwin popup loaded");
+    logEnabledSettings();
+});
+
+// Log settings when popup closes
+window.addEventListener('beforeunload', function() {
+    console.log("=� DigitalTwin popup closing");
+    logEnabledSettings();
 });
 
 // Load settings from storage
-function loadSettings() {
+async function loadSettings() {
     chrome.storage.local.get(['isDetectionActive'], (result) => {
         isDetectionActive = result.isDetectionActive !== false;
         updateUI();
     });
-    loadEnabledLabels();
+    await loadEnabledLabels();
 }
 
 async function loadEnabledLabels() {
@@ -60,6 +75,7 @@ async function saveEnabledLabels() {
       )
     );
     setStatus("Saved ✓");
+    logEnabledSettings();
 }
 
 // Update UI elements
@@ -90,6 +106,8 @@ function toggleDetection() {
     });
     
     updateUI();
+    logEnabledSettings();
+    console.log("hello");
 }
 
 function wireGlobalControls() {
