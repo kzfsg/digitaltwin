@@ -295,6 +295,15 @@ console.log(
   typeof window.debounce !== "undefined"
 );
 
+// Simple message listener to hide overlay immediately
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "hideOverlay" && overlay) {
+    overlay.style.display = "none";
+    console.log("🛡️ Overlay hidden immediately");
+    sendResponse({ success: true });
+  }
+});
+
 // Test PII detection after a short delay
 setTimeout(async () => {
   try {

@@ -131,6 +131,15 @@ function wireGlobalControls() {
             
             chrome.storage.local.set({ isOverlayActive: newState });
             
+            // If disabling overlay, send message to content script to hide it immediately
+            if (!newState) {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        type: "hideOverlay"
+                    });
+                });
+            }
+            
             // Update button styling
             const overlayBtn = document.getElementById('toggleOverlay');
             overlayBtn.textContent = newState ? 'Hide Overlay' : 'Show Overlay';
