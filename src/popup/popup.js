@@ -1,6 +1,4 @@
 let isDetectionActive = true;
-let detectionLog = [];
-let detectionCount = 0;
 
 const SETTINGS_KEY = "dt-settings";
 const ENTITY_LABELS = [
@@ -10,14 +8,6 @@ const ENTITY_LABELS = [
 ];
 
 let enabledLabels = {};
-
-// Utility function to log enabled settings
-function logEnabledSettings() {
-    console.log("=🔒 DigitalTwin Settings:", {
-        isDetectionActive,
-        enabledLabels: { ...enabledLabels }
-    });
-}
 
 const GROUPS = {
     btnName: ["GIVENNAME","SURNAME"],
@@ -29,36 +19,16 @@ const GROUPS = {
 };
 
 // Initialize popup
-document.addEventListener('DOMContentLoaded', async function() {
-    await loadSettings();
+document.addEventListener('DOMContentLoaded', function() {
+    loadSettings();
     wireQuickPills();
     wireMoreEntities();
     wireGlobalControls();
     updateUI();
     
-    console.log("=� DigitalTwin popup loaded");
-    logEnabledSettings();
-});
-
-// Log settings when popup closes
-window.addEventListener('beforeunload', function() {
-    console.log("=� DigitalTwin popup closing");
-    logEnabledSettings();
-});
-
-// Load settings from storage
-async function loadSettings() {
-    chrome.storage.local.get(['isDetectionActive'], (result) => {
-    // Set up event listeners with null checks
-    const clearLogBtn = document.getElementById('clearLog');
-    if (clearLogBtn) {
-        clearLogBtn.addEventListener('click', clearLog);
-    }
-    
-    const toggleBtn = document.getElementById('toggleDetection');
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', toggleDetection);
-    }
+    // Set up event listeners
+    document.getElementById('clearLog').addEventListener('click', clearLog);
+    document.getElementById('toggleDetection').addEventListener('click', toggleDetection);
     
     // Listen for messages from content scripts
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -75,14 +45,12 @@ async function loadSettings() {
 });
 
 // Load settings from storage
-async function loadSettings() {
-    chrome.storage.local.get(['isDetectionActive', 'detectionLog', 'detectionCount'], (result) => {
+function loadSettings() {
+    chrome.storage.local.get(['isDetectionActive'], (result) => {
         isDetectionActive = result.isDetectionActive !== false;
-        detectionLog = result.detectionLog || [];
-        detectionCount = result.detectionCount || 0;
         updateUI();
     });
-    await loadEnabledLabels();
+    loadEnabledLabels();
 }
 
 async function loadEnabledLabels() { 
@@ -106,8 +74,6 @@ async function saveEnabledLabels() {
           : Promise.resolve()
       )
     );
-    setStatus("Saved ✓");
-    logEnabledSettings();
     setStatus("Saved ✓"); // (uses your existing statusIndicator)
 }
 
@@ -140,43 +106,13 @@ function addDetection(data) {
     updateUI();
 }
 
-// Add new PII detection to log
-function addPIIDetection(data) {
-    if (!isDetectionActive) return;
-    
-    detectionCount++;
-    const detection = {
-        timestamp: data.timestamp,
-        url: data.url,
-        field: data.field,
-        entities: data.entities,
-        totalCount: data.totalCount,
-        type: 'pii'
-    };
-    
-    detectionLog.unshift(detection); // Add to beginning
-    
-    // Keep only last 50 detections
-    if (detectionLog.length > 50) {
-        detectionLog = detectionLog.slice(0, 50);
-    }
-    
-    // Save to storage
-    chrome.storage.local.set({
-        detectionLog: detectionLog,
-        detectionCount: detectionCount
-    });
-    
-    updateUI();
-}
-
-
 // Update UI elements
 function updateUI() {
     // Update toggle button
     const toggleBtn = document.getElementById('toggleDetection');
     toggleBtn.textContent = isDetectionActive ? 'Pause Detection' : 'Resume Detection';
     toggleBtn.style.background = isDetectionActive ? '#e33262' : '#4dd4da';
+
     reflectPillStates();
     reflectDropdownSelection();
 
@@ -253,49 +189,6 @@ function clearLog() {
     updateUI();
 }
 
-// Update log display
-function updateLogDisplay() {
-    const logContainer = document.getElementById('detectionLog');
-    
-    if (detectionLog.length === 0) {
-        logContainer.innerHTML = '<div class="no-detections">No PII detected yet. Start typing personal information!</div>';
-        return;
-    }
-    
-    const logHTML = detectionLog.map(detection => {
-        const time = new Date(detection.timestamp).toLocaleTimeString();
-        
-        if (detection.type === 'pii') {
-            const fieldDesc = `${detection.field.tagName} on ${detection.field.url}`;
-            const entitiesHTML = detection.entities.map(entity => 
-                `<span class="entity-item entity-${entity.type.toLowerCase()}" title="${entity.text} (${Math.round(entity.confidence * 100)}%)">${getEntityEmoji(entity.type)} ${entity.type}</span>`
-            ).join('');
-            
-            return `
-                <div class="log-entry">
-                    <div class="log-timestamp">${time} - <span class="pii-count">${detection.totalCount} PII items</span></div>
-                    <div class="log-field">${fieldDesc}</div>
-                    <div class="log-entities">${entitiesHTML}</div>
-                </div>
-            `;
-        } else {
-            // Legacy text detection format
-            const shortText = detection.text.length > 80 ? 
-                detection.text.substring(0, 80) + '...' : 
-                detection.text;
-            
-            return `
-                <div class="log-entry">
-                    <div class="log-timestamp">${time} - ${detection.url}</div>
-                    <div class="log-text">${escapeHtml(shortText)}</div>
-                </div>
-            `;
-        }
-    }).join('');
-    
-    logContainer.innerHTML = logHTML;
-}
-
 // Toggle detection on/off
 function toggleDetection() {
     isDetectionActive = !isDetectionActive;
@@ -313,8 +206,6 @@ function toggleDetection() {
     });
     
     updateUI();
-    logEnabledSettings();
-    console.log("hello");
 }
 
 function wireGlobalControls() {
@@ -404,17 +295,4 @@ function escapeHtml(text) {
 
 function setStatus(msg) {
     console.log("Status:", msg);
-}
-
-// Clear detection log
-function clearLog() {
-    detectionLog = [];
-    detectionCount = 0;
-    
-    chrome.storage.local.set({
-        detectionLog: [],
-        detectionCount: 0
-    });
-    
-    updateUI();
 }

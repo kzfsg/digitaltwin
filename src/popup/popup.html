@@ -29,29 +29,8 @@
         }
         .header h2 {
             margin: 0;
+            color: white;
             font-weight: 900;
-        }
-        .shiny-text {
-            color: #b5b5b5a4;
-            background: linear-gradient(
-                120deg,
-                rgba(255, 255, 255, 0) 40%,
-                rgba(255, 255, 255, 0.8) 50%,
-                rgba(255, 255, 255, 0) 60%
-            );
-            background-size: 200% 100%;
-            -webkit-background-clip: text;
-            background-clip: text;
-            display: inline-block;
-            animation: shine 3s linear infinite;
-        }
-        @keyframes shine {
-            0% {
-                background-position: 100%;
-            }
-            100% {
-                background-position: -100%;
-            }
         }
         .subtitle {
             font-size: 12px;
@@ -67,44 +46,6 @@
         .status-title {
             font-weight: bold;
             margin-bottom: 8px;
-            color: #333;
-        }
-        .detection-log {
-            max-height: 200px;
-            overflow-y: auto;
-            background: #f8f9fa;
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-family: monospace;
-        }
-        .log-entry {
-            margin: 5px 0;
-            padding: 8px;
-            background: white;
-            border-radius: 6px;
-            border-left: 4px solid #ff6b6b;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .log-timestamp {
-            color: #666;
-            font-size: 10px;
-        }
-        .log-field {
-            font-size: 10px;
-            color: #007cba;
-            margin-top: 2px;
-        }
-        .log-entities {
-            margin-top: 5px;
-        }
-        .entity-item {
-            display: inline-block;
-            margin: 2px;
-            padding: 2px 6px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
             color: white;
         }
         .detection-log {
@@ -177,13 +118,9 @@
             cursor: pointer;
             font-size: 14px;
             font-family: "Figtree", sans-serif;
-            transition: all 0.3s ease;
-            transform: scale(1);
         }
         button:hover {
             background: #4dd4da;
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(92, 225, 230, 0.4);
         }
         .clear-btn {
             background: #e33262;
@@ -257,7 +194,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2 class="shiny-text">DigitalTwin</h2>
+            <h2>DigitalTwin</h2>
             <div class="subtitle">AI Input Monitor</div>
         </div>
         
@@ -309,61 +246,6 @@
                 <button id="selectNone" style="padding:4px 8px">Select none</button>
             </div>
         </div>
-
-        <div class="status-section">
-            <div class="status-title">Censor Settings</div>
-
-            <div class="pill-grid" id="quickPills">
-                <button class="pill active" id="btnName"
-                    data-entities="GIVENNAME,SURNAME">Name</button>
-                <button class="pill active" id="btnEmail"
-                    data-entities="EMAIL">Email</button>
-                <button class="pill active" id="btnAddress"
-                    data-entities="STREET,BUILDINGNUM,CITY,ZIPCODE">Address</button>
-                <button class="pill active" id="btnCC"
-                    data-entities="CREDITCARDNUMBER">CC Number</button>
-                <button class="pill active" id="btnDOB"
-                    data-entities="DATEOFBIRTH">DOB</button>
-                <button class="pill active" id="btnUsername"
-                    data-entities="USERNAME">Username</button>
-            </div>
-
-            <details class="more-entities" id="moreEntities">
-                <summary>More entities</summary>
-                <div class="dropdown-wrap">
-                    <label for="otherEntities" style="font-size:12px;color:#bbb;">Choose additional entities to censor (Ctrl/Cmd+click for multiple)</label>
-                    <select id="otherEntities" class="entity-select" multiple size="8">
-                        <option value="ACCOUNTNUM">Bank Account Number</option>
-                        <option value="DRIVERLICENSENUM">Driver License Number</option>
-                        <option value="IDCARDNUM">ID Card Number (NRIC/FIN-like)</option>
-                        <option value="PASSWORD">Password</option>
-                        <option value="SOCIALNUM">CPF / Social Number</option>
-                        <option value="TAXNUM">Tax Number</option>
-                        <option value="TELEPHONENUM">Telephone Number</option>
-                        <option value="BUILDINGNUM">Building Number</option>
-                        <option value="CITY">City</option>
-                        <option value="STREET">Street</option>
-                        <option value="ZIPCODE">Postal Code</option>
-                    </select>
-                <div class="mini-controls">
-                    <button id="applyOtherEntities" style="padding:6px 10px">Apply</button>
-                    <button id="clearOtherEntities" class="clear-btn" style="padding:6px 10px">Clear</button>
-                </div>
-                </div>
-            </details>
-            <div class="mini-controls">
-                <button id="selectAll" style="padding:4px 8px">Select all</button>
-                <button id="selectNone" style="padding:4px 8px">Select none</button>
-            </div>
-        </div>
-
-        <div class="status-section">
-            <div class="status-title">PII Detections</div>
-            <div id="detectionLog" class="detection-log">
-                <div class="no-detections">No PII detected yet. Start typing personal information!</div>
-            </div>
-        </div>
-
         
     </div>
 
