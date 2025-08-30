@@ -70,32 +70,42 @@ let overlay = null;
 
 // Display detected text in overlay
 function showInOverlay(text, field) {
-  if (!overlay) {
-    overlay = createOverlay();
-  }
+  // Check if overlay is enabled before showing
+  chrome.storage.local.get(['isOverlayActive'], (result) => {
+    const isOverlayEnabled = result.isOverlayActive !== false; // Default to true
+    
+    // Always send detection to popup regardless of overlay state
+    sendDetectionToPopup(text, field);
+    
+    // Only show overlay if enabled
+    if (!isOverlayEnabled) {
+      return;
+    }
+    
+    if (!overlay) {
+      overlay = createOverlay();
+    }
 
-  const content = overlay.querySelector("#digitaltwin-content");
-  const timestamp = new Date().toLocaleTimeString();
+    const content = overlay.querySelector("#digitaltwin-content");
+    const timestamp = new Date().toLocaleTimeString();
 
-  content.innerHTML = `
-        <div style="margin-bottom: 8px;">
-            <strong>Time:</strong> ${timestamp}<br>
-            <strong>Field:</strong> ${getFieldDescription(field)}<br>
-            <strong>Text:</strong> ${text.substring(0, 100)}${
-    text.length > 100 ? "..." : ""
-  }
-        </div>
-    `;
+    content.innerHTML = `
+          <div style="margin-bottom: 8px;">
+              <strong>Time:</strong> ${timestamp}<br>
+              <strong>Field:</strong> ${getFieldDescription(field)}<br>
+              <strong>Text:</strong> ${text.substring(0, 100)}${
+      text.length > 100 ? "..." : ""
+    }
+          </div>
+      `;
 
-  overlay.style.display = "block";
+    overlay.style.display = "block";
 
-  // Send detection to popup
-  sendDetectionToPopup(text, field);
-
-  // Auto-hide after 10 seconds
-  setTimeout(() => {
-    if (overlay) overlay.style.display = "none";
-  }, 10000);
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+      if (overlay) overlay.style.display = "none";
+    }, 10000);
+  });
 }
 
 // Send detection data to popup

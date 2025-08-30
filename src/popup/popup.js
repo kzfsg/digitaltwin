@@ -85,6 +85,16 @@ function updateUI() {
     toggleBtn.textContent = isDetectionActive ? 'Pause Detection' : 'Resume Detection';
     toggleBtn.style.background = isDetectionActive ? '#e33262' : '#4dd4da';
 
+    // Update overlay button state
+    chrome.storage.local.get(['isOverlayActive'], (result) => {
+        const isOverlayActive = result.isOverlayActive !== false; // Default to true
+        const overlayBtn = document.getElementById('toggleOverlay');
+        if (overlayBtn) {
+            overlayBtn.textContent = isOverlayActive ? 'Hide Overlay' : 'Show Overlay';
+            overlayBtn.style.background = isOverlayActive ? '#e33262' : '#4dd4da';
+        }
+    });
+
     reflectPillStates();
     reflectDropdownSelection();
 }
@@ -112,6 +122,21 @@ function toggleDetection() {
 
 function wireGlobalControls() {
     document.getElementById('toggleDetection')?.addEventListener('click', toggleDetection);
+    
+    // Simple overlay toggle - just stores a flag
+    document.getElementById('toggleOverlay')?.addEventListener('click', () => {
+        chrome.storage.local.get(['isOverlayActive'], (result) => {
+            const currentState = result.isOverlayActive !== false; // Default to true
+            const newState = !currentState;
+            
+            chrome.storage.local.set({ isOverlayActive: newState });
+            
+            // Update button styling
+            const overlayBtn = document.getElementById('toggleOverlay');
+            overlayBtn.textContent = newState ? 'Hide Overlay' : 'Show Overlay';
+            overlayBtn.style.background = newState ? '#e33262' : '#4dd4da';
+        });
+    });
 
     document.getElementById("selectAll")?.addEventListener("click", () => {
       for (const l of ENTITY_LABELS) enabledLabels[l] = true;
