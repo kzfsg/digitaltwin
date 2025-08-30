@@ -2,42 +2,126 @@
 function detectPIIWithRegex(text) {
   const entities = [];
   
-  // Enhanced regex patterns for various PII types (Singapore-focused)
+  // Comprehensive regex patterns for various PII types
   const piiPatterns = {
     EMAIL: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
     
     // Singapore phone number patterns
     PHONE: [
-      // 8-digit Singapore mobile numbers (e.g., 92124222, 81234567)
+      // Singapore mobile numbers (8-digit)
       /\b[89]\d{7}\b/g,
-      // Singapore landline with country code (e.g., +65 6123 4567)
-      /\+65\s*[6]\d{3}\s*\d{4}\b/g,
-      // Singapore mobile with country code (e.g., +65 9212 4222)
-      /\+65\s*[89]\d{3}\s*\d{4}\b/g,
-      // US format for compatibility
-      /\b\d{3}-\d{3}-\d{4}\b/g,
-      // General formats with spaces or dashes
-      /\b\d{4}\s*\d{4}\b/g
+      // Singapore landline (8-digit starting with 6)
+      /\b6\d{7}\b/g,
+      // Singapore with country code (+65)
+      /\+65\s*[689]\d{3}\s*\d{4}\b/g,
+      // Singapore mobile with space formatting
+      /\b[89]\d{3}\s*\d{4}\b/g,
+      // Singapore landline with space formatting
+      /\b6\d{3}\s*\d{4}\b/g
     ],
     
-    SSN: /\b\d{3}-\d{2}-\d{4}\b/g, // US SSN
+    // Singapore NRIC (National Registration Identity Card)
+    NRIC: [
+      /\b[STFG]\d{7}[A-Z]\b/g,  // Standard Singapore NRIC format
+      /\b[stfg]\d{7}[a-z]\b/g,  // Lowercase version
+      /\b[STFGstfg]\d{7}[A-Za-z]\b/g  // Mixed case
+    ],
     
-    // Singapore-style name patterns (including Chinese names)
+    // Credit Card Numbers
+    CREDIT_CARD: [
+      /\b4\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g, // Visa
+      /\b5[1-5]\d{2}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g, // Mastercard
+      /\b3[47]\d{2}[-\s]?\d{6}[-\s]?\d{5}\b/g, // Amex
+      /\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g // Generic
+    ],
+    
+    // Singapore Names (more flexible patterns)
     PERSON: [
-      // Direct multi-part names: "lim jun jie", "sally wong"
-      /\b[A-Za-z]{2,8}\s+[A-Za-z]{2,8}(?:\s+[A-Za-z]{2,8})?\b/g,
-      // Single capitalized names: "John", "Mary" (but be careful with common words)
-      /\b[A-Z][a-z]{2,12}\b/g,
-      // Name after "I'm" or "I am" - captures only the name part
-      /(?:I'm|I am)\s+([A-Za-z]{2,8}(?:\s+[A-Za-z]{2,8}){0,2})/gi,
-      // Name after "My name is" - captures only the name part
-      /(?:my name is|name is)\s+([A-Za-z]{2,8}(?:\s+[A-Za-z]{2,8}){0,2})/gi,
-      // Name after greetings - captures only the name part
-      /(?:Hi|Hello|Hey)\s+([A-Za-z]{2,8}(?:\s+[A-Za-z]{2,8}){0,2})/gi
+      // Names after "I'm" or "I am" - captures only the name part
+      /(?:I'm|I am)\s+([A-Z][a-z]{1,12}\s+[A-Z][a-z]{1,12}(?:\s+[A-Z][a-z]{1,12})?(?:\s+[A-Z][a-z]{1,12})?)/gi,
+      // Names after "My name is" - captures only the name part
+      /(?:my name is|name is)\s+([A-Z][a-z]{1,12}\s+[A-Z][a-z]{1,12}(?:\s+[A-Z][a-z]{1,12})?(?:\s+[A-Z][a-z]{1,12})?)/gi,
+      // Names after greetings - captures only the name part
+      /(?:Hi|Hello|Hey|Meet)\s+([A-Z][a-z]{1,12}\s+[A-Z][a-z]{1,12}(?:\s+[A-Z][a-z]{1,12})?(?:\s+[A-Z][a-z]{1,12})?)/gi,
+      // Singapore surnames followed by given names (flexible)
+      /\b(?:tan|lim|lee|ng|ong|wong|goh|teo|lau|sia|chan|chen|chong|chua|gan|ho|koh|low|neo|seah|soh|tay|toh|wee|yap|yeo|yeoh|yong|yu|chin|chew|foo|heng|hong|hoo|koo|lam|leong|loo|mok|sim|sng|soo|thong|tong|wang|woo|yak|yam|yang|ahmad|hassan|ibrahim|ismail|mohamed|mohammad|rahman|ali|omar|osman|salleh|abdullah|adam|hamid|hussain|rashid|singh|kumar|raj|rajan|krishnan|murugan|nathan|ravi|samy|devi|lakshmanan|suresh|prakash|menon|nair|pillai)\s+[A-Za-z]{2,12}(?:\s+[A-Za-z]{2,12})?\b/gi,
+      // Traditional format: Given name + surname (more flexible)
+      /\b[A-Z][a-z]{1,12}\s+[A-Z][a-z]{1,12}(?:\s+[A-Z][a-z]{1,12})?(?:\s+[A-Z][a-z]{1,12})?\b/g,
+      // More flexible format for common names
+      /\b[A-Za-z]{2,10}\s+[A-Za-z]{2,10}(?:\s+[A-Za-z]{2,10})?\b/g
     ],
     
-    CREDIT_CARD: /\b\d{4}-\d{4}-\d{4}-\d{4}\b/g,
-    ADDRESS: /\b\d{1,5}\s[A-Za-z0-9\s]{2,20}\s(St|Street|Rd|Road|Ave|Avenue|Blvd|Boulevard)\b/g
+    // Singapore addresses
+    ADDRESS: [
+      /\b\d{1,4}\s+[A-Za-z0-9\s]{2,40}\s+(Road|Rd|Street|St|Avenue|Ave|Drive|Dr|Lane|Ln|Close|Crescent|Walk|Park|Gardens?|Heights?|View|Terrace|Place|Plaza)\b/g,
+      /\b(?:Blk|Block)\s+\d{1,4}[A-Z]?\s+[A-Za-z0-9\s]{5,40}\b/g,
+      /\b\d{1,4}\s+[A-Za-z0-9\s]{2,40}\s+(?:Road|Rd|Street|St|Avenue|Ave)\s*#\d{2}-\d{2,3}\b/g,
+      /\bP\.?O\.?\s*Box\s+\d{1,6}\b/g
+    ],
+    
+    // Singapore postal codes (6-digit format)
+    POSTAL_CODE: [
+      /\b\d{6}\b/g, // Singapore postal codes (098765)
+      /\bSingapore\s+\d{6}\b/gi // "Singapore 098765" format
+    ],
+    
+    // Comprehensive Date of Birth patterns
+    DATE_OF_BIRTH: [
+      // Numeric formats
+      /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g, // DD/MM/YYYY or MM/DD/YYYY
+      /\b\d{1,2}-\d{1,2}-\d{4}\b/g, // DD-MM-YYYY or MM-DD-YYYY
+      /\b\d{4}\/\d{1,2}\/\d{1,2}\b/g, // YYYY/MM/DD
+      /\b\d{4}-\d{1,2}-\d{1,2}\b/g, // YYYY-MM-DD
+      /\b\d{1,2}\.\d{1,2}\.\d{4}\b/g, // DD.MM.YYYY
+      
+      // Written month formats (full names)
+      /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/gi, // January 15, 1990
+      /\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/gi, // 15 January 1990
+      
+      // Abbreviated month formats
+      /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.?\s+\d{1,2},?\s+\d{4}\b/gi, // Jan 15, 1990
+      /\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.?\s+\d{4}\b/gi, // 15 Jan 1990
+      
+      // Ordinal date formats
+      /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th),?\s+\d{4}\b/gi, // January 1st, 1990
+      /\b\d{1,2}(?:st|nd|rd|th)\s+(?:of\s+)?(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/gi, // 1st of January 1990
+      
+      // Casual date formats with context
+      /\b(?:born\s+(?:on\s+)?)\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/gi, // born 1 January 1990
+      /\b(?:birthday\s+(?:is\s+)?(?:on\s+)?)\d{1,2}\/\d{1,2}\/\d{4}\b/gi // birthday is 01/01/1990
+    ],
+    
+    // Singapore Driver's License Numbers
+    DRIVER_LICENSE: [
+      /\b[A-Z]\d{7,8}[A-Z]?\b/g, // Singapore format similar to NRIC
+      /\bSPDL\d{6,8}\b/g // Singapore Police Driving License format
+    ],
+    
+    // Bank Account Numbers (Singapore banks)
+    BANK_ACCOUNT: [
+      /\b\d{8,17}\b/g, // 8-17 digit account numbers
+      /\b\d{3}[-\s]\d{3}[-\s]\d{3,6}\b/g // Singapore bank account formatting
+    ],
+    
+    // Singapore Work Pass Numbers
+    WORK_PASS: [
+      /\b[FGM]\d{7}[A-Z]\b/g, // Foreign ID in Singapore
+      /\bWP\d{8}\b/g, // Work Permit numbers
+      /\bEP\d{8}\b/g, // Employment Pass numbers
+      /\bDP\d{8}\b/g  // Dependant Pass numbers
+    ],
+    
+    // Tax Numbers
+    TAX_NUMBER: [
+      /\b\d{2}-\d{7}\b/g, // EIN format
+      /\b\d{3}-\d{2}-\d{4}\b/g // SSN used as tax ID
+    ],
+    
+    // Passwords (contextual)
+    PASSWORD: [
+      /(?:password|pwd|pass)\s*[:=]\s*([A-Za-z0-9@#$%^&*!]{6,})/gi,
+      /(?:password|pwd|pass)\s+is\s+([A-Za-z0-9@#$%^&*!]{6,})/gi
+    ]
   };
 
   // Check each PII type
@@ -52,34 +136,132 @@ function detectPIIWithRegex(text) {
         const startPos = match[1] ? match.index + match[0].indexOf(match[1]) : match.index;
         const endPos = startPos + matchedText.length;
         
-        // Avoid false positives for names
+        // Apply contextual validation for different PII types
         if (entityType === 'PERSON') {
           const lowerText = matchedText.toLowerCase();
-          const falsePositives = [
-            // Places
-            'united states', 'new york', 'los angeles', 'san francisco', 'hong kong', 
-            // Common words and phrases
+          const comprehensiveFalsePositives = [
+            // Common phrases
             'thank you', 'good morning', 'good afternoon', 'good evening', 'good night',
             'how are', 'nice to', 'see you', 'talk to', 'speak to', 'email me',
-            // Tech terms
+            'phone number', 'mobile number', 'contact number', 'telephone number',
             'user name', 'full name', 'first name', 'last name', 'display name',
-            // Common single words that aren't names
+            'company name', 'business name', 'file name', 'folder name',
+            // Geographic locations
+            'united states', 'new york', 'hong kong', 'kuala lumpur', 'penang',
+            'johor bahru', 'singapore city', 'orchard road', 'marina bay',
+            // Time and date related
+            'today', 'tomorrow', 'yesterday', 'monday', 'tuesday', 'wednesday', 
+            'thursday', 'friday', 'saturday', 'sunday', 'january', 'february',
+            'march', 'april', 'june', 'july', 'august', 'september', 'october',
+            'november', 'december', 'morning', 'afternoon', 'evening', 'night',
+            // Common words and fillers
             'the', 'and', 'but', 'for', 'with', 'you', 'are', 'can', 'will', 'have',
             'this', 'that', 'what', 'when', 'where', 'why', 'how', 'who', 'which',
             'would', 'could', 'should', 'might', 'must', 'shall', 'may', 'need',
-            'make', 'take', 'give', 'tell', 'ask', 'work', 'play', 'help', 'want'
+            'make', 'take', 'give', 'tell', 'ask', 'work', 'play', 'help', 'want',
+            'about', 'from', 'they', 'them', 'were', 'been', 'said', 'each', 'she',
+            'their', 'time', 'very', 'after', 'first', 'well', 'year', 'name',
+            // Technology and business terms
+            'email', 'password', 'account', 'login', 'logout', 'signin', 'signup',
+            'website', 'internet', 'google', 'facebook', 'twitter', 'instagram',
+            'whatsapp', 'telegram', 'linkedin', 'youtube', 'microsoft', 'apple',
+            // Singapore context that aren't names
+            'singapore', 'nric', 'passport', 'address', 'postal code', 'zip code',
+            'street', 'road', 'avenue', 'lane', 'block', 'unit', 'floor'
           ];
           
-          if (falsePositives.some(fp => lowerText.includes(fp)) || matchedText.length < 3) {
+          // Check if any false positive is contained in the matched text
+          if (comprehensiveFalsePositives.some(fp => lowerText.includes(fp))) {
             continue;
           }
           
-          // For single names, be more strict - must be capitalized and alphabetic only
+          // Require multi-part names (no single names)
           if (!matchedText.includes(' ')) {
-            if (!matchedText[0].match(/[A-Z]/) || !matchedText.match(/^[A-Za-z]+$/)) {
-              continue;
+            continue;
+          }
+          
+          // More flexible validation for Singapore names
+          const nameParts = matchedText.split(' ');
+          if (nameParts.length < 2 || nameParts.length > 4) {
+            continue; // Must be 2-4 parts
+          }
+          
+          // Singapore surnames for enhanced validation
+          const singaporeSurnames = ['tan', 'lim', 'lee', 'ng', 'ong', 'wong', 'goh', 'teo', 'lau', 'sia', 'chan', 'chen', 'chong', 'chua', 'gan', 'ho', 'koh', 'low', 'neo', 'seah', 'soh', 'tay', 'toh', 'wee', 'yap', 'yeo', 'yeoh', 'yong', 'yu', 'chin', 'chew', 'foo', 'heng', 'hong', 'hoo', 'koo', 'lam', 'leong', 'loo', 'mok', 'sim', 'sng', 'soo', 'thong', 'tong', 'wang', 'woo', 'yak', 'yam', 'yang', 'ahmad', 'hassan', 'ibrahim', 'ismail', 'mohamed', 'mohammad', 'rahman', 'ali', 'omar', 'osman', 'salleh', 'abdullah', 'adam', 'hamid', 'hussain', 'rashid', 'singh', 'kumar', 'raj', 'rajan', 'krishnan', 'murugan', 'nathan', 'ravi', 'samy', 'devi', 'lakshmanan', 'suresh', 'prakash', 'menon', 'nair', 'pillai'];
+          
+          // Check if it's likely a person name vs. common phrase
+          const likely_name_indicators = [
+            // Has common Singapore surnames
+            singaporeSurnames.some(surname => lowerText.includes(surname)),
+            // Not all parts are common English words
+            !nameParts.every(part => ['the', 'and', 'of', 'to', 'a', 'in', 'for', 'is', 'on', 'that', 'by', 'this', 'with', 'you', 'it', 'not', 'or', 'be', 'are'].includes(part.toLowerCase()))
+          ];
+          
+          // Each part validation (more flexible)
+          let isValidName = true;
+          for (const part of nameParts) {
+            if (part.length < 1 || part.length > 15) {
+              isValidName = false;
+              break;
+            }
+            // Each part should be alphabetic only
+            if (!part.match(/^[A-Za-z]+$/)) {
+              isValidName = false;
+              break;
             }
           }
+          
+          // If it doesn't have any indicators, be more strict about false positives
+          if (!likely_name_indicators.some(indicator => indicator)) {
+            const extended_false_positives = [
+              'phone number', 'mobile number', 'email address', 'today tomorrow',
+              'good morning', 'thank you', 'how are', 'see you', 'talk to'
+            ];
+            if (extended_false_positives.some(fp => lowerText.includes(fp))) {
+              isValidName = false;
+            }
+          }
+          
+          if (!isValidName) {
+            continue;
+          }
+        }
+        
+        // Contextual validation for other PII types
+        else if (['DRIVER_LICENSE', 'BANK_ACCOUNT', 'WORK_PASS', 'TAX_NUMBER', 'POSTAL_CODE', 'DATE_OF_BIRTH'].includes(entityType)) {
+          // Check surrounding context for these types
+          const contextBefore = text.slice(Math.max(0, startPos - 30), startPos).toLowerCase();
+          const contextAfter = text.slice(endPos, endPos + 30).toLowerCase();
+          const fullContext = contextBefore + ' ' + contextAfter;
+          
+          const contextKeywords = {
+            'DRIVER_LICENSE': ['license', 'licence', 'dl', 'driver', 'driving', 'singapore'],
+            'BANK_ACCOUNT': ['account', 'bank', 'routing', 'iban', 'swift', 'dbs', 'ocbc', 'uob'],
+            'WORK_PASS': ['work', 'permit', 'pass', 'employment', 'ep', 'wp', 'dp', 'singapore', 'foreign'],
+            'TAX_NUMBER': ['tax', 'ein', 'itin', 'tin', 'singapore'],
+            'POSTAL_CODE': ['postal', 'code', 'postcode', 'singapore', 'address'],
+            'DATE_OF_BIRTH': ['birth', 'born', 'dob', 'birthday', 'age']
+          };
+          
+          const keywords = contextKeywords[entityType];
+          if (keywords && !keywords.some(keyword => fullContext.includes(keyword))) {
+            continue; // Skip if no contextual keywords found
+          }
+        }
+        
+        // Special handling for passwords - extract only the password part
+        else if (entityType === 'PASSWORD' && match[1]) {
+          const passwordText = match[1];
+          const passwordStart = match.index + match[0].indexOf(passwordText);
+          const passwordEnd = passwordStart + passwordText.length;
+          
+          entities.push({
+            start: passwordStart,
+            end: passwordEnd,
+            entity_group: entityType,
+            confidence: 0.9
+          });
+          continue; // Skip the normal processing
         }
         
         entities.push({
