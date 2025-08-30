@@ -9,6 +9,14 @@ const ENTITY_LABELS = [
 
 let enabledLabels = {};
 
+// Utility function to log enabled settings
+function logEnabledSettings() {
+    console.log("=🔒 DigitalTwin Settings:", {
+        isDetectionActive,
+        enabledLabels: { ...enabledLabels }
+    });
+}
+
 const GROUPS = {
     btnName: ["GIVENNAME","SURNAME"],
     btnEmail: ["EMAIL"],
@@ -19,51 +27,43 @@ const GROUPS = {
 };
 
 // Initialize popup
-document.addEventListener('DOMContentLoaded', function() {
-    loadSettings();
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadSettings();
     wireQuickPills();
     wireMoreEntities();
     wireGlobalControls();
     updateUI();
     
-    // Set up event listeners
-    document.getElementById('clearLog').addEventListener('click', clearLog);
-    document.getElementById('toggleDetection').addEventListener('click', toggleDetection);
-    
-    // Listen for messages from content scripts
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.type === "textDetected") {
-            addDetection(message.data);
-            sendResponse({ status: "received" });
-        } else if (message.type === "piiDetected") {
-            addPIIDetection(message.data);
-            sendResponse({ status: "received" });
-        }
-    });
-    
-    console.log("=� DigitalTwin popup loaded");
+    console.log("=� DigitalTwin popup loaded");
+    logEnabledSettings();
+});
+
+// Log settings when popup closes
+window.addEventListener('beforeunload', function() {
+    console.log("=� DigitalTwin popup closing");
+    logEnabledSettings();
 });
 
 // Load settings from storage
-function loadSettings() {
+async function loadSettings() {
     chrome.storage.local.get(['isDetectionActive'], (result) => {
         isDetectionActive = result.isDetectionActive !== false;
         updateUI();
     });
-    loadEnabledLabels();
+    await loadEnabledLabels();
 }
 
-async function loadEnabledLabels() { 
+async function loadEnabledLabels() {
     const obj = await chrome.storage.sync.get(SETTINGS_KEY);
     const saved = obj[SETTINGS_KEY]?.enabledLabels;
     enabledLabels = {};
     for (const l of ENTITY_LABELS) enabledLabels[l] = saved?.[l] !== false;
 }
 
-async function saveEnabledLabels() { 
+async function saveEnabledLabels() {
     await chrome.storage.sync.set({ [SETTINGS_KEY]: { enabledLabels } });
 
-    const tabs = await chrome.tabs.query({}); 
+    const tabs = await chrome.tabs.query({});
     await Promise.all(
       tabs.map((t) =>
         t.id
@@ -74,36 +74,8 @@ async function saveEnabledLabels() {
           : Promise.resolve()
       )
     );
-    setStatus("Saved ✓"); // (uses your existing statusIndicator)
-}
-
-// Add new detection to log
-function addDetection(data) {
-    if (!isDetectionActive) return;
-    
-    detectionCount++;
-    const detection = {
-        timestamp: new Date().toISOString(),
-        text: data.text,
-        field: data.field,
-        url: data.url,
-        type: 'text'
-    };
-    
-    detectionLog.unshift(detection); // Add to beginning
-    
-    // Keep only last 50 detections
-    if (detectionLog.length > 50) {
-        detectionLog = detectionLog.slice(0, 50);
-    }
-    
-    // Save to storage
-    chrome.storage.local.set({
-        detectionLog: detectionLog,
-        detectionCount: detectionCount
-    });
-    
-    updateUI();
+    setStatus("Saved ✓");
+    logEnabledSettings();
 }
 
 // Update UI elements
@@ -115,78 +87,6 @@ function updateUI() {
 
     reflectPillStates();
     reflectDropdownSelection();
-
-    // Update log display
-    updateLogDisplay();
-}
-
-// Update log display
-function updateLogDisplay() {
-    const logContainer = document.getElementById('detectionLog');
-    
-    if (detectionLog.length === 0) {
-        logContainer.innerHTML = '<div class="no-detections">No PII detected yet. Start typing personal information!</div>';
-        return;
-    }
-    
-    const logHTML = detectionLog.map(detection => {
-        const time = new Date(detection.timestamp).toLocaleTimeString();
-        
-        if (detection.type === 'pii') {
-            const fieldDesc = `${detection.field.tagName} on ${detection.field.url}`;
-            const entitiesHTML = detection.entities.map(entity => 
-                `<span class="entity-item entity-${entity.type.toLowerCase()}" title="${entity.text} (${Math.round(entity.confidence * 100)}%)">${getEntityEmoji(entity.type)} ${entity.type}</span>`
-            ).join('');
-            
-            return `
-                <div class="log-entry">
-                    <div class="log-timestamp">${time} - <span class="pii-count">${detection.totalCount} PII items</span></div>
-                    <div class="log-field">${fieldDesc}</div>
-                    <div class="log-entities">${entitiesHTML}</div>
-                </div>
-            `;
-        } else {
-            // Legacy text detection format
-            const shortText = detection.text.length > 80 ? 
-                detection.text.substring(0, 80) + '...' : 
-                detection.text;
-            
-            return `
-                <div class="log-entry">
-                    <div class="log-timestamp">${time} - ${detection.url}</div>
-                    <div class="log-text">${escapeHtml(shortText)}</div>
-                </div>
-            `;
-        }
-    }).join('');
-    
-    logContainer.innerHTML = logHTML;
-}
-
-// Get emoji for entity type
-function getEntityEmoji(type) {
-    const emojiMap = {
-        'EMAIL': '📧',
-        'PHONE': '📞',
-        'PERSON': '👤',
-        'SSN': '🆔',
-        'ADDRESS': '📍',
-        'CREDIT_CARD': '💳'
-    };
-    return emojiMap[type] || '🔒';
-}
-
-// Clear detection log
-function clearLog() {
-    detectionLog = [];
-    detectionCount = 0;
-    
-    chrome.storage.local.set({
-        detectionLog: [],
-        detectionCount: 0
-    });
-    
-    updateUI();
 }
 
 // Toggle detection on/off
@@ -206,6 +106,8 @@ function toggleDetection() {
     });
     
     updateUI();
+    logEnabledSettings();
+    console.log("hello");
 }
 
 function wireGlobalControls() {
