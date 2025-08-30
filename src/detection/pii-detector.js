@@ -10,23 +10,28 @@ async function detectPII(text) {
 
     const data = await response.json();
     console.log("Backend detection result:", data);
-    
+
     let entities = data.entities || [];
-    
+
     // If no PERSON entities found by backend, use local regex fallback for names
-    const hasPersonEntity = entities.some(e => e.entity_group === 'PERSON');
+    const hasPersonEntity = entities.some((e) => e.entity_group === "PERSON");
     if (!hasPersonEntity && window.detectPIIWithRegex) {
       const localEntities = window.detectPIIWithRegex(text);
-      const personEntities = localEntities.filter(e => e.entity_group === 'PERSON');
+      const personEntities = localEntities.filter(
+        (e) => e.entity_group === "PERSON"
+      );
       entities = [...entities, ...personEntities];
-      console.log("Added person entities from local detection:", personEntities);
+      console.log(
+        "Added person entities from local detection:",
+        personEntities
+      );
     }
-    
+
     // Return both anonymized text and entities for highlighting
     return {
       anonymized_text: data.anonymized_text,
       entities: entities,
-      original_text: text
+      original_text: text,
     };
   } catch (error) {
     console.error("Error calling PII API:", error);
@@ -36,14 +41,36 @@ async function detectPII(text) {
       return {
         anonymized_text: text,
         entities: localEntities,
-        original_text: text
+        original_text: text,
       };
     }
     return {
       anonymized_text: text,
       entities: [],
-      original_text: text
+      original_text: text,
     };
+  }
+}
+
+async function detectPIIWithFake(text) {
+  try {
+    const response = await fetch("http://127.0.0.1:8000/replace_with_fake", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+
+    const data = await response.json();
+    console.log("Fake PII result:", data);
+
+    return {
+      anonymized_text: data.anonymized_text,
+      entities: data.entities,
+      original_text: data.original_text,
+    };
+  } catch (error) {
+    console.error("Error calling /replace_with_fake:", error);
+    return { anonymized_text: text, entities: [], original_text: text };
   }
 }
 
