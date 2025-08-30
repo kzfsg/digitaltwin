@@ -117,9 +117,9 @@ class PIIHighlighter {
     }, 5000);
   }
 
-  // Create precise text highlights using positioned overlays that highlight only the specific PII text
+  // Create precise text highlights using positioned overlays that support multi-line text
   createTextHighlights(field, entities) {
-    console.log('🎯 Creating text highlights for:', entities.length, 'entities');
+    console.log('🎯 Creating multi-line text highlights for:', entities.length, 'entities');
     
     const fieldRect = field.getBoundingClientRect();
     const fieldStyle = window.getComputedStyle(field);
@@ -128,100 +128,283 @@ class PIIHighlighter {
     console.log('🎯 Text to highlight:', text.substring(0, 100));
     console.log('🎯 Field rect:', fieldRect);
     
-    // Create a measuring element to calculate text positions
-    const measuringDiv = document.createElement('div');
-    measuringDiv.style.cssText = `
-      position: absolute;
-      visibility: hidden;
-      white-space: pre;
-      font-family: ${fieldStyle.fontFamily};
-      font-size: ${fieldStyle.fontSize};
-      font-weight: ${fieldStyle.fontWeight};
-      line-height: ${fieldStyle.lineHeight};
-      letter-spacing: ${fieldStyle.letterSpacing};
-      word-spacing: ${fieldStyle.wordSpacing};
-    `;
-    document.body.appendChild(measuringDiv);
-    
     entities.forEach((entity, index) => {
       const entityText = text.substring(entity.start, entity.end);
-      const beforeText = text.substring(0, entity.start);
       
-      // Measure text positions
-      measuringDiv.textContent = beforeText;
-      const beforeWidth = measuringDiv.offsetWidth;
-      
-      measuringDiv.textContent = entityText;
-      const entityWidth = Math.max(measuringDiv.offsetWidth, 10); // Minimum width
-      const entityHeight = Math.max(measuringDiv.offsetHeight, 16); // Minimum height
-      
-      // Create highlight overlay for the specific PII text
-      const highlight = document.createElement('div');
-      highlight.className = `digitaltwin-text-highlight ${entity.entity_group.toLowerCase()}`;
-      highlight.title = `${entity.entity_group}: ${entityText}`;
-      
-      const paddingLeft = parseFloat(fieldStyle.paddingLeft) || 0;
-      const paddingTop = parseFloat(fieldStyle.paddingTop) || 0;
-      const borderLeft = parseFloat(fieldStyle.borderLeftWidth) || 0;
-      const borderTop = parseFloat(fieldStyle.borderTopWidth) || 0;
-      
-      highlight.style.position = 'fixed';
-      highlight.style.left = (fieldRect.left + paddingLeft + borderLeft + beforeWidth) + 'px';
-      highlight.style.top = (fieldRect.top + paddingTop + borderTop) + 'px';
-      highlight.style.width = entityWidth + 'px';
-      highlight.style.height = entityHeight + 'px';
-      highlight.style.zIndex = '10000';
-      highlight.style.pointerEvents = 'none';
-      highlight.style.borderRadius = '3px';
-      // Fallback background color if CSS classes don't work
-      highlight.style.background = 'rgba(255, 107, 107, 0.3)';
-      highlight.style.borderBottom = '2px solid #ff6b6b';
-      
-      console.log('🎯 Created highlight element:', {
-        entityText,
-        left: highlight.style.left,
-        top: highlight.style.top,
-        width: highlight.style.width,
-        height: highlight.style.height,
-        zIndex: highlight.style.zIndex
-      });
-      
-      document.body.appendChild(highlight);
-      
-      // Store for cleanup
-      if (!this.textHighlights) this.textHighlights = new WeakMap();
-      if (!this.textHighlights.get(field)) this.textHighlights.set(field, []);
-      this.textHighlights.get(field).push(highlight);
-      
-      // Also create a small badge indicator
-      const badge = document.createElement('div');
-      badge.className = `digitaltwin-pii-mini-badge ${entity.entity_group.toLowerCase()}`;
-      badge.textContent = this.getEmojiForType(entity.entity_group);
-      badge.title = `${entity.entity_group}: ${entityText}`;
-      
-      badge.style.position = 'fixed';
-      badge.style.left = (fieldRect.left + paddingLeft + borderLeft + beforeWidth + entityWidth + 5) + 'px';
-      badge.style.top = (fieldRect.top + paddingTop + borderTop - 5) + 'px';
-      badge.style.zIndex = '1001';
-      badge.style.pointerEvents = 'none';
-      
-      document.body.appendChild(badge);
-      this.textHighlights.get(field).push(badge);
-      
-      // Auto-remove after 5 seconds
-      setTimeout(() => {
-        if (highlight.parentNode) highlight.remove();
-        if (badge.parentNode) badge.remove();
-      }, 5000);
+      try {
+        // Use a more robust approach that handles multi-line text
+        const highlights = this.createMultiLineHighlight(field, entity, entityText, text);
+        
+        // Store all highlight elements for cleanup
+        if (!this.textHighlights) this.textHighlights = new WeakMap();
+        if (!this.textHighlights.get(field)) this.textHighlights.set(field, []);
+        
+        highlights.forEach(highlight => {
+          document.body.appendChild(highlight);
+          this.textHighlights.get(field).push(highlight);
+          
+          // Auto-remove after 5 seconds
+          setTimeout(() => {
+            if (highlight.parentNode) highlight.remove();
+          }, 5000);
+        });
+        
+      } catch (error) {
+        console.warn('🎯 Multi-line highlighting failed for entity:', entityText, error);
+        // Fall back to simple badge approach
+        this.createSimpleBadge(field, entity, entityText, index);
+      }
     });
     
-    // Clean up measuring element
-    document.body.removeChild(measuringDiv);
-    
-    // Only add field border if we actually created highlights
+    // Add field border if we have highlights
     if (entities.length > 0) {
       field.style.boxShadow = '0 0 0 1px rgba(255, 107, 107, 0.3)';
     }
+  }
+
+  // Create multi-line capable highlights using Range API
+  createMultiLineHighlight(field, entity, entityText, fullText) {
+    const highlights = [];
+    
+    // For textarea and input fields, use a simpler approach
+    if (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT') {
+      return this.createTextareaHighlight(field, entity, entityText);
+    }
+    
+    // For contenteditable divs, use Range API for precise positioning
+    if (field.contentEditable === 'true') {
+      return this.createContentEditableHighlight(field, entity, entityText, fullText);
+    }
+    
+    // Fallback to simple positioning
+    return this.createFallbackHighlight(field, entity, entityText);
+  }
+
+  // Highlight for textarea/input fields
+  createTextareaHighlight(field, entity, entityText) {
+    const fieldRect = field.getBoundingClientRect();
+    const fieldStyle = window.getComputedStyle(field);
+    
+    // Calculate approximate text position (single line assumption for fallback)
+    const averageCharWidth = 8; // Approximate character width
+    const lineHeight = parseFloat(fieldStyle.lineHeight) || 20;
+    
+    const charsBeforeEntity = entity.start;
+    const linesBeforeEntity = Math.floor(charsBeforeEntity / 50); // Rough estimate
+    const charPositionInLine = charsBeforeEntity % 50;
+    
+    const paddingLeft = parseFloat(fieldStyle.paddingLeft) || 0;
+    const paddingTop = parseFloat(fieldStyle.paddingTop) || 0;
+    const borderLeft = parseFloat(fieldStyle.borderLeftWidth) || 0;
+    const borderTop = parseFloat(fieldStyle.borderTopWidth) || 0;
+    
+    const highlight = document.createElement('div');
+    highlight.className = `digitaltwin-text-highlight ${entity.entity_group.toLowerCase()}`;
+    highlight.title = `${entity.entity_group}: ${entityText}`;
+    
+    highlight.style.position = 'fixed';
+    highlight.style.left = (fieldRect.left + paddingLeft + borderLeft + (charPositionInLine * averageCharWidth)) + 'px';
+    highlight.style.top = (fieldRect.top + paddingTop + borderTop + (linesBeforeEntity * lineHeight)) + 'px';
+    highlight.style.width = Math.max(entityText.length * averageCharWidth, 20) + 'px';
+    highlight.style.height = lineHeight + 'px';
+    highlight.style.zIndex = '10000';
+    highlight.style.pointerEvents = 'none';
+    highlight.style.borderRadius = '3px';
+    highlight.style.background = this.getPIIBackgroundColor(entity.entity_group);
+    highlight.style.border = `2px solid ${this.getPIIBorderColor(entity.entity_group)}`;
+    
+    console.log('🎯 Created textarea highlight:', {
+      entityText,
+      position: { left: highlight.style.left, top: highlight.style.top },
+      size: { width: highlight.style.width, height: highlight.style.height }
+    });
+    
+    return [highlight];
+  }
+
+  // Highlight for contenteditable divs using Range API
+  createContentEditableHighlight(field, entity, entityText, fullText) {
+    const highlights = [];
+    
+    try {
+      // Find text nodes and create ranges
+      const textNodes = this.getTextNodes(field);
+      let currentOffset = 0;
+      
+      for (const textNode of textNodes) {
+        const nodeLength = textNode.textContent.length;
+        const nodeEnd = currentOffset + nodeLength;
+        
+        // Check if entity overlaps with this text node
+        if (entity.start < nodeEnd && entity.end > currentOffset) {
+          const startInNode = Math.max(0, entity.start - currentOffset);
+          const endInNode = Math.min(nodeLength, entity.end - currentOffset);
+          
+          if (startInNode < endInNode) {
+            const range = document.createRange();
+            range.setStart(textNode, startInNode);
+            range.setEnd(textNode, endInNode);
+            
+            const rects = range.getClientRects();
+            
+            // Create highlight for each rectangle (handles line breaks)
+            for (let i = 0; i < rects.length; i++) {
+              const rect = rects[i];
+              if (rect.width > 0 && rect.height > 0) {
+                const highlight = document.createElement('div');
+                highlight.className = `digitaltwin-text-highlight ${entity.entity_group.toLowerCase()}`;
+                highlight.title = `${entity.entity_group}: ${entityText}`;
+                
+                highlight.style.position = 'fixed';
+                highlight.style.left = rect.left + 'px';
+                highlight.style.top = rect.top + 'px';
+                highlight.style.width = rect.width + 'px';
+                highlight.style.height = rect.height + 'px';
+                highlight.style.zIndex = '10000';
+                highlight.style.pointerEvents = 'none';
+                highlight.style.borderRadius = '3px';
+                highlight.style.background = this.getPIIBackgroundColor(entity.entity_group);
+                highlight.style.border = `1px solid ${this.getPIIBorderColor(entity.entity_group)}`;
+                
+                highlights.push(highlight);
+              }
+            }
+          }
+        }
+        
+        currentOffset = nodeEnd;
+        if (currentOffset >= entity.end) break;
+      }
+      
+      console.log('🎯 Created contenteditable highlights:', highlights.length, 'rectangles for', entityText);
+      
+    } catch (error) {
+      console.warn('🎯 Range-based highlighting failed:', error);
+      return this.createFallbackHighlight(field, entity, entityText);
+    }
+    
+    return highlights;
+  }
+
+  // Fallback simple highlight
+  createFallbackHighlight(field, entity, entityText) {
+    const fieldRect = field.getBoundingClientRect();
+    
+    const highlight = document.createElement('div');
+    highlight.className = `digitaltwin-text-highlight ${entity.entity_group.toLowerCase()}`;
+    highlight.title = `${entity.entity_group}: ${entityText}`;
+    
+    highlight.style.position = 'fixed';
+    highlight.style.left = fieldRect.left + 'px';
+    highlight.style.top = (fieldRect.top - 25) + 'px';
+    highlight.style.padding = '4px 8px';
+    highlight.style.zIndex = '10000';
+    highlight.style.pointerEvents = 'none';
+    highlight.style.borderRadius = '12px';
+    highlight.style.background = this.getPIIBackgroundColor(entity.entity_group);
+    highlight.style.color = 'white';
+    highlight.style.fontSize = '11px';
+    highlight.style.fontWeight = 'bold';
+    highlight.style.whiteSpace = 'nowrap';
+    highlight.textContent = `${this.getEmojiForType(entity.entity_group)} ${entityText}`;
+    
+    return [highlight];
+  }
+
+  // Create a simple badge for failed highlighting
+  createSimpleBadge(field, entity, entityText, index) {
+    const fieldRect = field.getBoundingClientRect();
+    
+    const badge = document.createElement('div');
+    badge.className = `digitaltwin-simple-badge ${entity.entity_group.toLowerCase()}`;
+    badge.innerHTML = `${this.getEmojiForType(entity.entity_group)} ${entityText}`;
+    badge.title = `${entity.entity_group}: ${entityText}`;
+    
+    badge.style.position = 'fixed';
+    badge.style.left = (fieldRect.right + 10) + 'px';
+    badge.style.top = (fieldRect.top + (index * 25)) + 'px';
+    badge.style.zIndex = '10000';
+    badge.style.background = this.getPIIBackgroundColor(entity.entity_group);
+    badge.style.color = 'white';
+    badge.style.padding = '4px 8px';
+    badge.style.borderRadius = '12px';
+    badge.style.fontSize = '11px';
+    badge.style.fontWeight = 'bold';
+    badge.style.whiteSpace = 'nowrap';
+    badge.style.pointerEvents = 'none';
+    badge.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+    
+    document.body.appendChild(badge);
+    
+    if (!this.textHighlights) this.textHighlights = new WeakMap();
+    if (!this.textHighlights.get(field)) this.textHighlights.set(field, []);
+    this.textHighlights.get(field).push(badge);
+    
+    setTimeout(() => {
+      if (badge.parentNode) badge.remove();
+    }, 5000);
+  }
+
+  // Helper function to get all text nodes in an element
+  getTextNodes(element) {
+    const textNodes = [];
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+      textNodes.push(node);
+    }
+    
+    return textNodes;
+  }
+
+  // Get background color for PII type
+  getPIIBackgroundColor(entityGroup) {
+    const colorMap = {
+      'EMAIL': 'rgba(74, 144, 226, 0.3)',
+      'PHONE': 'rgba(46, 204, 113, 0.3)',
+      'PERSON': 'rgba(155, 89, 182, 0.3)',
+      'NRIC': 'rgba(231, 76, 60, 0.3)',
+      'SSN': 'rgba(231, 76, 60, 0.3)', // Fallback
+      'CREDIT_CARD': 'rgba(241, 196, 15, 0.3)',
+      'ADDRESS': 'rgba(230, 126, 34, 0.3)',
+      'POSTAL_CODE': 'rgba(52, 152, 219, 0.3)',
+      'DATE_OF_BIRTH': 'rgba(231, 76, 60, 0.3)',
+      'DRIVER_LICENSE': 'rgba(142, 68, 173, 0.3)',
+      'BANK_ACCOUNT': 'rgba(39, 174, 96, 0.3)',
+      'WORK_PASS': 'rgba(0, 123, 255, 0.3)',
+      'ID_CARD': 'rgba(230, 126, 34, 0.3)',
+      'TAX_NUMBER': 'rgba(192, 57, 43, 0.3)',
+      'PASSWORD': 'rgba(231, 76, 60, 0.4)'
+    };
+    return colorMap[entityGroup] || 'rgba(255, 107, 107, 0.3)';
+  }
+
+  // Get border color for PII type
+  getPIIBorderColor(entityGroup) {
+    const colorMap = {
+      'EMAIL': '#4a90e2',
+      'PHONE': '#2ecc71',
+      'PERSON': '#9b59b6',
+      'NRIC': '#e74c3c',
+      'SSN': '#e74c3c', // Fallback
+      'CREDIT_CARD': '#f1c40f',
+      'ADDRESS': '#e67e22',
+      'POSTAL_CODE': '#3498db',
+      'DATE_OF_BIRTH': '#e74c3c',
+      'DRIVER_LICENSE': '#8e44ad',
+      'BANK_ACCOUNT': '#27ae60',
+      'WORK_PASS': '#007bff',
+      'ID_CARD': '#e67e22',
+      'TAX_NUMBER': '#c0392b',
+      'PASSWORD': '#e74c3c'
+    };
+    return colorMap[entityGroup] || '#ff6b6b';
   }
 
   // Send detection info to extension popup
@@ -273,9 +456,18 @@ class PIIHighlighter {
       'EMAIL': '📧',
       'PHONE': '📞', 
       'PERSON': '👤',
-      'SSN': '🆔',
+      'NRIC': '🆔',
+      'SSN': '🆔', // Fallback for old SSN references
       'ADDRESS': '📍',
-      'CREDIT_CARD': '💳'
+      'CREDIT_CARD': '💳',
+      'POSTAL_CODE': '📮',
+      'DATE_OF_BIRTH': '🎂',
+      'DRIVER_LICENSE': '🚗',
+      'BANK_ACCOUNT': '🏦',
+      'WORK_PASS': '🛂',
+      'ID_CARD': '🪪',
+      'TAX_NUMBER': '💰',
+      'PASSWORD': '🔐'
     };
     return emojiMap[type] || '🔒';
   }
