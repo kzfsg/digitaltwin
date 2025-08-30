@@ -54,13 +54,20 @@ async function loadSettings() {
 }
 
 async function loadEnabledLabels() {
+    console.log("🔍 Loading enabled labels with key:", SETTINGS_KEY);
     const obj = await chrome.storage.sync.get(SETTINGS_KEY);
+    console.log("🔍 Raw storage object from loadEnabledLabels:", obj);
     const saved = obj[SETTINGS_KEY]?.enabledLabels;
+    console.log("🔍 Saved enabled labels from loadEnabledLabels:", saved);
     enabledLabels = {};
     for (const l of ENTITY_LABELS) enabledLabels[l] = saved?.[l] !== false;
+    console.log("🔍 Final enabledLabels after loading:", enabledLabels);
 }
 
 async function saveEnabledLabels() {
+    console.log("🔍 Saving enabled labels:", enabledLabels);
+    console.log("🔍 Saving with key:", SETTINGS_KEY);
+    console.log("🔍 Saving object:", { [SETTINGS_KEY]: { enabledLabels } });
     await chrome.storage.sync.set({ [SETTINGS_KEY]: { enabledLabels } });
 
     const tabs = await chrome.tabs.query({});

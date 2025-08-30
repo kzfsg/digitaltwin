@@ -301,6 +301,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     overlay.style.display = "none";
     console.log("🛡️ Overlay hidden immediately");
     sendResponse({ success: true });
+  } else if (message.type === "updateEnabledLabels") {
+    console.log("🔍 Received updated enabled labels:", message.enabledLabels);
+    sendResponse({ success: true });
   }
 });
 

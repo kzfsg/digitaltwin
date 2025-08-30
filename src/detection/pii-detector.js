@@ -54,11 +54,27 @@ async function detectPII(text) {
 
 async function detectPIIWithFake(text) {
   try {
+    // Define constants (should match popup.js)
+    const SETTINGS_KEY = "dt-settings";
+    const ENTITY_LABELS = [
+      "ACCOUNTNUM","BUILDINGNUM","CITY","CREDITCARDNUMBER","DATEOFBIRTH","DRIVERLICENSENUM",
+      "EMAIL","GIVENNAME","IDCARDNUM","PASSWORD","SOCIALNUM","STREET","SURNAME","TAXNUM",
+      "TELEPHONENUM","USERNAME","ZIPCODE"
+    ];
+
+    console.log("🔍 Getting settings from Chrome storage with key:", SETTINGS_KEY);
+    
     // Get labels from Chrome storage
     const obj = await chrome.storage.sync.get(SETTINGS_KEY);
+    console.log("🔍 Raw storage object:", obj);
+    
     const saved = obj[SETTINGS_KEY]?.enabledLabels;
+    console.log("🔍 Saved enabled labels:", saved);
+    
     const enabledLabels = {};
     for (const l of ENTITY_LABELS) enabledLabels[l] = saved?.[l] !== false;
+    
+    console.log("🔍 Final enabled labels to send to backend:", enabledLabels);
 
     const response = await fetch("http://127.0.0.1:8000/replace_with_fake", {
       method: "POST",
