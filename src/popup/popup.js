@@ -11,6 +11,14 @@ const ENTITY_LABELS = [
 
 let enabledLabels = {};
 
+// Utility function to log enabled settings
+function logEnabledSettings() {
+    console.log("=🔒 DigitalTwin Settings:", {
+        isDetectionActive,
+        enabledLabels: { ...enabledLabels }
+    });
+}
+
 const GROUPS = {
     btnName: ["GIVENNAME","SURNAME"],
     btnEmail: ["EMAIL"],
@@ -21,13 +29,26 @@ const GROUPS = {
 };
 
 // Initialize popup
-document.addEventListener('DOMContentLoaded', function() {
-    loadSettings();
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadSettings();
     wireQuickPills();
     wireMoreEntities();
     wireGlobalControls();
     updateUI();
     
+    console.log("=� DigitalTwin popup loaded");
+    logEnabledSettings();
+});
+
+// Log settings when popup closes
+window.addEventListener('beforeunload', function() {
+    console.log("=� DigitalTwin popup closing");
+    logEnabledSettings();
+});
+
+// Load settings from storage
+async function loadSettings() {
+    chrome.storage.local.get(['isDetectionActive'], (result) => {
     // Set up event listeners with null checks
     const clearLogBtn = document.getElementById('clearLog');
     if (clearLogBtn) {
@@ -54,14 +75,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Load settings from storage
-function loadSettings() {
+async function loadSettings() {
     chrome.storage.local.get(['isDetectionActive', 'detectionLog', 'detectionCount'], (result) => {
         isDetectionActive = result.isDetectionActive !== false;
         detectionLog = result.detectionLog || [];
         detectionCount = result.detectionCount || 0;
         updateUI();
     });
-    loadEnabledLabels();
+    await loadEnabledLabels();
 }
 
 async function loadEnabledLabels() { 
@@ -85,6 +106,8 @@ async function saveEnabledLabels() {
           : Promise.resolve()
       )
     );
+    setStatus("Saved ✓");
+    logEnabledSettings();
     setStatus("Saved ✓"); // (uses your existing statusIndicator)
 }
 
@@ -147,34 +170,6 @@ function addPIIDetection(data) {
     updateUI();
 }
 
-// Legacy text detection handler
-function addDetection(data) {
-    if (!isDetectionActive) return;
-    
-    detectionCount++;
-    const detection = {
-        timestamp: new Date().toISOString(),
-        text: data.text,
-        field: data.field,
-        url: data.url,
-        type: 'text'
-    };
-    
-    detectionLog.unshift(detection); // Add to beginning
-    
-    // Keep only last 50 detections
-    if (detectionLog.length > 50) {
-        detectionLog = detectionLog.slice(0, 50);
-    }
-    
-    // Save to storage
-    chrome.storage.local.set({
-        detectionLog: detectionLog,
-        detectionCount: detectionCount
-    });
-    
-    updateUI();
-}
 
 // Update UI elements
 function updateUI() {
@@ -318,6 +313,8 @@ function toggleDetection() {
     });
     
     updateUI();
+    logEnabledSettings();
+    console.log("hello");
 }
 
 function wireGlobalControls() {
