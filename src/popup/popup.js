@@ -182,7 +182,6 @@ function updateUI() {
     const toggleBtn = document.getElementById('toggleDetection');
     toggleBtn.textContent = isDetectionActive ? 'Pause Detection' : 'Resume Detection';
     toggleBtn.style.background = isDetectionActive ? '#e33262' : '#4dd4da';
-
     reflectPillStates();
     reflectDropdownSelection();
 
@@ -300,32 +299,6 @@ function updateLogDisplay() {
     }).join('');
     
     logContainer.innerHTML = logHTML;
-}
-
-// Get emoji for entity type
-function getEntityEmoji(type) {
-    const emojiMap = {
-        'EMAIL': '📧',
-        'PHONE': '📞',
-        'PERSON': '👤',
-        'SSN': '🆔',
-        'ADDRESS': '📍',
-        'CREDIT_CARD': '💳'
-    };
-    return emojiMap[type] || '🔒';
-}
-
-// Clear detection log
-function clearLog() {
-    detectionLog = [];
-    detectionCount = 0;
-    
-    chrome.storage.local.set({
-        detectionLog: [],
-        detectionCount: 0
-    });
-    
-    updateUI();
 }
 
 // Toggle detection on/off

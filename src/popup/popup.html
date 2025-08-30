@@ -29,8 +29,29 @@
         }
         .header h2 {
             margin: 0;
-            color: white;
             font-weight: 900;
+        }
+        .shiny-text {
+            color: #b5b5b5a4;
+            background: linear-gradient(
+                120deg,
+                rgba(255, 255, 255, 0) 40%,
+                rgba(255, 255, 255, 0.8) 50%,
+                rgba(255, 255, 255, 0) 60%
+            );
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            display: inline-block;
+            animation: shine 3s linear infinite;
+        }
+        @keyframes shine {
+            0% {
+                background-position: 100%;
+            }
+            100% {
+                background-position: -100%;
+            }
         }
         .subtitle {
             font-size: 12px;
@@ -156,9 +177,13 @@
             cursor: pointer;
             font-size: 14px;
             font-family: "Figtree", sans-serif;
+            transition: all 0.3s ease;
+            transform: scale(1);
         }
         button:hover {
             background: #4dd4da;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(92, 225, 230, 0.4);
         }
         .clear-btn {
             background: #e33262;
@@ -232,7 +257,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h2>DigitalTwin</h2>
+            <h2 class="shiny-text">DigitalTwin</h2>
             <div class="subtitle">AI Input Monitor</div>
         </div>
         
@@ -337,8 +362,8 @@
             <div id="detectionLog" class="detection-log">
                 <div class="no-detections">No PII detected yet. Start typing personal information!</div>
             </div>
-            <button id="clearLog" class="clear-btn">Clear Log</button>
         </div>
+
         
     </div>
 
