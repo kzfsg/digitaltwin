@@ -111,7 +111,7 @@ function updateUI() {
     // Update toggle button
     const toggleBtn = document.getElementById('toggleDetection');
     toggleBtn.textContent = isDetectionActive ? 'Pause Detection' : 'Resume Detection';
-    toggleBtn.style.background = isDetectionActive ? '#007cba' : '#28a745';
+    toggleBtn.style.background = isDetectionActive ? '#e33262' : '#4dd4da';
 
     reflectPillStates();
     reflectDropdownSelection();
