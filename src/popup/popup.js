@@ -1,6 +1,4 @@
-let detectionCount = 0;
 let isDetectionActive = true;
-let detectionLog = [];
 
 const SETTINGS_KEY = "dt-settings";
 const ENTITY_LABELS = [
@@ -22,7 +20,7 @@ const GROUPS = {
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', function() {
-    loadDetectionLog();
+    loadSettings();
     wireQuickPills();
     wireMoreEntities();
     wireGlobalControls();
@@ -46,22 +44,21 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("=� DigitalTwin popup loaded");
 });
 
-// Load detection log from storage
-function loadDetectionLog() {
-    chrome.storage.local.get(['detectionLog', 'detectionCount', 'isDetectionActive'], (result) => {
-        detectionLog = result.detectionLog || [];
-        detectionCount = result.detectionCount || 0;
+// Load settings from storage
+function loadSettings() {
+    chrome.storage.local.get(['isDetectionActive'], (result) => {
         isDetectionActive = result.isDetectionActive !== false;
         updateUI();
     });
+    loadEnabledLabels();
 }
 
 async function loadEnabledLabels() { 
     const obj = await chrome.storage.sync.get(SETTINGS_KEY);
     const saved = obj[SETTINGS_KEY]?.enabledLabels;
     enabledLabels = {};
-    for (const l of ENTITY_LABELS) enabledLabels[l] = saved?.[l] !== false; // default: ON
-  }
+    for (const l of ENTITY_LABELS) enabledLabels[l] = saved?.[l] !== false;
+}
 
 async function saveEnabledLabels() { 
     await chrome.storage.sync.set({ [SETTINGS_KEY]: { enabledLabels } });
@@ -111,10 +108,6 @@ function addDetection(data) {
 
 // Update UI elements
 function updateUI() {
-    // Update counters
-    document.getElementById('detectionCount').textContent = detectionCount;
-    document.getElementById('statusIndicator').textContent = isDetectionActive ? '' : 'L';
-    
     // Update toggle button
     const toggleBtn = document.getElementById('toggleDetection');
     toggleBtn.textContent = isDetectionActive ? 'Pause Detection' : 'Resume Detection';
@@ -214,71 +207,8 @@ function toggleDetection() {
     
     updateUI();
 }
-function ensureSettingsUI() {
-  // Create a section under your existing controls
-  const host = document.getElementById("popupRoot") || document.body;
 
-  // Wrapper
-  const section = document.createElement("section");
-  section.id = "fieldsSection";
-  section.style.cssText = "margin-top:10px; padding-top:10px; border-top:1px solid #e5e7eb;";
-
-  const title = document.createElement("div");
-  title.textContent = "Censor these fields:";
-  title.style.cssText = "font-weight:600; margin-bottom:6px;";
-  section.appendChild(title);
-
-  // Buttons
-  const controls = document.createElement("div");
-  controls.style.cssText = "display:flex; gap:8px; margin:6px 0;";
-  controls.innerHTML = `
-    <button id="selectAll" style="padding:4px 8px">Select all</button>
-    <button id="selectNone" style="padding:4px 8px">Select none</button>
-  `;
-  section.appendChild(controls);
-
-  // Container for checkboxes
-  const container = document.createElement("div");
-  container.id = "fieldsContainer";
-  container.style.cssText = "display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px;";
-  section.appendChild(container);
-
-  host.appendChild(section);
-}
-
-function renderFields() {
-  const wrap = document.getElementById("fieldsContainer");
-  if (!wrap) return;
-  wrap.innerHTML = "";
-
-  for (const label of ENTITY_LABELS) {
-    const id = `fld-${label}`;
-    const row = document.createElement("label");
-    row.htmlFor = id;
-    row.style.cssText = "display:flex; align-items:center; gap:6px; cursor:pointer;";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.id = id;
-    cb.checked = enabledLabels[label] !== false;
-    cb.addEventListener("change", () => {
-      enabledLabels[label] = cb.checked;
-      setStatus(`${pretty(label)}: ${cb.checked ? "On" : "Off"} (saving…)`);
-      // Save immediately on change
-      saveEnabledLabels();
-    });
-
-    const text = document.createElement("span");
-    text.textContent = pretty(label);
-
-    row.appendChild(cb);
-    row.appendChild(text);
-    wrap.appendChild(row);
-  }
-}
-
-  function wireGlobalControls() {
-    document.getElementById('clearLog')?.addEventListener('click', clearLog);
+function wireGlobalControls() {
     document.getElementById('toggleDetection')?.addEventListener('click', toggleDetection);
 
     document.getElementById("selectAll")?.addEventListener("click", () => {
@@ -290,9 +220,9 @@ function renderFields() {
       for (const l of ENTITY_LABELS) enabledLabels[l] = false;
       saveEnabledLabels().then(updateUI);
     });
-  }
+}
 
-  function wireQuickPills() { 
+function wireQuickPills() { 
     Object.keys(GROUPS).forEach((btnId) => {
       const btn = document.getElementById(btnId);
       if (!btn) return;
@@ -306,13 +236,13 @@ function renderFields() {
     });
 
     reflectPillStates();
-  }
+}
 
-  function isGroupActive(group) { 
+function isGroupActive(group) { 
     return group.every((label) => enabledLabels[label] !== false);
-  }
+}
 
-  function reflectPillStates() { 
+function reflectPillStates() { 
     Object.keys(GROUPS).forEach((btnId) => {
       const btn = document.getElementById(btnId);
       if (!btn) return;
@@ -320,9 +250,9 @@ function renderFields() {
       btn.classList.toggle("active", active);
       btn.setAttribute("aria-pressed", String(active));
     });
-  }
+}
 
-  function wireMoreEntities() { 
+function wireMoreEntities() { 
     const select = document.getElementById("otherEntities");
     const applyBtn = document.getElementById("applyOtherEntities");
     const clearBtn = document.getElementById("clearOtherEntities");
@@ -341,20 +271,20 @@ function renderFields() {
     });
 
     reflectDropdownSelection();
-  }
+}
 
-  function getMultiSelectValues(selectEl) { 
+function getMultiSelectValues(selectEl) { 
     if (!selectEl) return [];
     return Array.from(selectEl.selectedOptions || []).map((o) => o.value);
-  }
+}
 
-  function reflectDropdownSelection() { 
+function reflectDropdownSelection() { 
     const select = document.getElementById("otherEntities");
     if (!select) return;
     Array.from(select.options).forEach((opt) => {
       opt.selected = enabledLabels[opt.value] !== false;
     });
-  }
+}
 
 // Escape HTML to prevent XSS
 function escapeHtml(text) {
@@ -362,7 +292,7 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
 function setStatus(msg) {
-  const el = document.getElementById("statusIndicator");
-  if (el) el.textContent = msg;
+    console.log("Status:", msg);
 }
